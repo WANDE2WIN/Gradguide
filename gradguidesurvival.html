@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>GradGuide — Survival Guide</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="gradguide-auth.js"></script>
+  <script>gradguideRequireLogin();</script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Playfair+Display:ital,wght@0,700;1,700&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    [data-theme="light"] {
+      --bg: #F0F4F0; --card: #ffffff; --text: #1A1A2E; --muted: #556B5A;
+      --border: rgba(45,106,79,0.15); --green: #2D6A4F; --lime: #52B788;
+      --soft: #D8EDDF; --red: #E63946; --yellow: #F4A261; --blue: #4A90D9;
+      --nav-bg: rgba(240,244,240,0.55); --nav-border: rgba(255,255,255,0.6);
+      --nav-shadow: rgba(45,106,79,0.12); --feat-bg: #1A1A2E;
+    }
+    [data-theme="dark"] {
+      --bg: #0F1A14; --card: #1C2B1F; --text: #E8F5EE; --muted: #8FBFA0;
+      --border: rgba(82,183,136,0.2); --green: #52B788; --lime: #74C69D;
+      --soft: #1C2B1F; --red: #FF6B6B; --yellow: #FFB347; --blue: #6AABF7;
+      --nav-bg: rgba(15,26,20,0.55); --nav-border: rgba(82,183,136,0.25);
+      --nav-shadow: rgba(0,0,0,0.4); --feat-bg: #0A1209;
+    }
+
+    body { font-family: 'Outfit', sans-serif; background: var(--bg); color: var(--text); transition: background 0.35s, color 0.35s; }
+
+    /* NAV */
+    nav { display: flex; justify-content: space-between; align-items: center; padding: 0.9rem 2.5rem; background: var(--nav-bg); backdrop-filter: blur(22px) saturate(180%); -webkit-backdrop-filter: blur(22px) saturate(180%); border-bottom: 1px solid var(--nav-border); box-shadow: 0 4px 32px var(--nav-shadow), inset 0 1px 0 rgba(255,255,255,0.3); position: sticky; top: 0; z-index: 100; border-radius: 0 0 18px 18px; }
+    .logo { font-family: 'Playfair Display', serif; font-size: 1.7rem; font-weight: 700; font-style: italic; color: var(--green); text-decoration: none; }
+    .logo span { font-style: normal; color: var(--lime); }
+    nav ul { list-style: none; display: flex; align-items: center; gap: 0.3rem; }
+    nav ul li a { text-decoration: none; color: var(--text); font-weight: 500; font-size: 0.9rem; padding: 0.45rem 0.9rem; border-radius: 50px; transition: background 0.2s, color 0.2s; }
+    nav ul li a:hover { background: rgba(82,183,136,0.15); color: var(--green); }
+    .nav-cta { background: var(--green) !important; color: #fff !important; padding: 0.5rem 1.1rem !important; border-radius: 50px !important; font-weight: 600 !important; }
+    .nav-right { display: flex; align-items: center; gap: 1rem; }
+    .theme-toggle { background: var(--soft); border: 1.5px solid var(--border); border-radius: 50px; width: 52px; height: 28px; cursor: pointer; position: relative; transition: background 0.3s; flex-shrink: 0; }
+    .theme-toggle::after { content: ''; position: absolute; top: 3px; left: 3px; width: 20px; height: 20px; border-radius: 50%; background: var(--green); transition: transform 0.3s; box-shadow: 0 2px 6px rgba(0,0,0,0.2); }
+    [data-theme="dark"] .theme-toggle::after { transform: translateX(24px); background: var(--lime); }
+    .toggle-icon { position: absolute; top: 50%; transform: translateY(-50%); font-size: 0.65rem; pointer-events: none; }
+    .toggle-icon.sun { left: 6px; } .toggle-icon.moon { right: 6px; }
+    .hamburger { display: none; flex-direction: column; gap: 5px; cursor: pointer; background: none; border: none; padding: 4px; }
+    .hamburger span { display: block; width: 24px; height: 2.5px; background: var(--text); border-radius: 4px; transition: all 0.3s; }
+    .hamburger.open span:nth-child(1) { transform: translateY(7.5px) rotate(45deg); }
+    .hamburger.open span:nth-child(2) { opacity: 0; }
+    .hamburger.open span:nth-child(3) { transform: translateY(-7.5px) rotate(-45deg); }
+    .mobile-menu { display: none; flex-direction: column; gap: 0.3rem; position: absolute; top: calc(100% + 8px); left: 1rem; right: 1rem; background: var(--nav-bg); backdrop-filter: blur(22px) saturate(180%); border: 1px solid var(--nav-border); border-radius: 16px; padding: 1rem; box-shadow: 0 8px 32px var(--nav-shadow); z-index: 99; }
+    .mobile-menu.open { display: flex; }
+    .mobile-menu a { text-decoration: none; color: var(--text); font-weight: 500; font-size: 1rem; padding: 0.7rem 1rem; border-radius: 10px; transition: background 0.2s; }
+    .mobile-menu a:hover { background: rgba(82,183,136,0.15); color: var(--green); }
+    .mobile-menu .nav-cta { background: var(--green) !important; color: #fff !important; text-align: center; margin-top: 0.3rem; }
+    @media (max-width: 640px) { nav ul { display: none; } .hamburger { display: flex; } }
+
+    /* PAGE HEADER */
+    .page-header { background: linear-gradient(150deg, var(--soft) 0%, var(--bg) 70%); padding: 3.5rem 2.5rem 2.5rem; text-align: center; }
+    .badge { background: var(--lime); color: var(--bg); font-size: 0.78rem; font-weight: 700; padding: 0.35rem 1.1rem; border-radius: 50px; letter-spacing: 0.08em; text-transform: uppercase; display: inline-block; margin-bottom: 1rem; }
+    .page-header h1 { font-family: 'Playfair Display', serif; font-size: clamp(2rem, 5vw, 3.2rem); font-weight: 700; margin-bottom: 0.6rem; }
+    .page-header h1 em { font-style: italic; color: var(--green); }
+    .page-header p { color: var(--muted); font-size: 1rem; max-width: 480px; margin: 0 auto; line-height: 1.7; }
+
+    /* MAIN */
+    .main { max-width: 900px; margin: 0 auto; padding: 2.5rem 2rem 5rem; }
+    @media (max-width: 640px) { .main { padding: 1.5rem 1.2rem 3rem; } }
+
+    /* CATEGORY FILTER */
+    .filter-row { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 2rem; }
+    .tab-btn { background: var(--card); border: 1.5px solid var(--border); color: var(--text); font-family: 'Outfit', sans-serif; font-size: 0.88rem; font-weight: 600; padding: 0.45rem 1.1rem; border-radius: 50px; cursor: pointer; transition: all 0.2s; }
+    .tab-btn:hover { border-color: var(--green); color: var(--green); }
+    .tab-btn.active { background: var(--green); color: #fff; border-color: var(--green); }
+
+    /* ACCORDION */
+    .accordion { display: flex; flex-direction: column; gap: 0.9rem; }
+
+    .accordion-item { background: var(--card); border-radius: 16px; border: 1.5px solid var(--border); overflow: hidden; transition: box-shadow 0.2s; }
+    .accordion-item:hover { box-shadow: 0 4px 20px var(--nav-shadow); }
+    .accordion-item.open { border-color: var(--green); }
+
+    .accordion-header { display: flex; align-items: center; gap: 1rem; padding: 1.2rem 1.5rem; cursor: pointer; user-select: none; }
+    .accordion-icon { font-size: 1.6rem; flex-shrink: 0; }
+    .accordion-title { flex: 1; }
+    .accordion-title h3 { font-size: 1rem; font-weight: 700; margin-bottom: 0.1rem; }
+    .accordion-title span { font-size: 0.78rem; color: var(--muted); font-weight: 500; }
+    .accordion-arrow { font-size: 1rem; color: var(--muted); transition: transform 0.3s; flex-shrink: 0; }
+    .accordion-item.open .accordion-arrow { transform: rotate(180deg); color: var(--green); }
+
+    .accordion-body { display: none; padding: 0 1.5rem 1.5rem; }
+    .accordion-item.open .accordion-body { display: block; animation: slideDown 0.25s ease; }
+    @keyframes slideDown { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: translateY(0); } }
+
+    .tip-list { display: flex; flex-direction: column; gap: 0.7rem; }
+    .tip { display: flex; gap: 0.8rem; align-items: flex-start; background: var(--bg); border-radius: 10px; padding: 0.9rem 1rem; }
+    .tip-num { width: 24px; height: 24px; border-radius: 50%; background: var(--green); color: #fff; font-size: 0.72rem; font-weight: 800; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 1px; }
+    .tip p { font-size: 0.88rem; line-height: 1.65; color: var(--text); }
+    .tip p strong { color: var(--green); }
+
+    /* QUICK TIPS BANNER */
+    .quick-banner {
+      background: var(--green);
+      border-radius: 20px;
+      padding: 2rem;
+      color: #fff;
+      margin-bottom: 2rem;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 1.2rem;
+    }
+    .quick-stat { text-align: center; }
+    .quick-stat .num { font-family: 'Playfair Display', serif; font-size: 2rem; font-weight: 700; display: block; }
+    .quick-stat .label { font-size: 0.82rem; opacity: 0.85; }
+
+    footer { background: var(--feat-bg); color: #556B5A; text-align: center; padding: 2rem; font-size: 0.88rem; }
+    footer span { color: var(--lime); }
+  </style>
+</head>
+<body>
+
+  <nav>
+    <a href="gradguide.html" class="logo"><em>Grad</em><span>Guide</span></a>
+    <ul>
+      <li><a href="gradguide.html">🏠 Home</a></li>
+      <li><a href="gradguideevents.html">Events</a></li>
+      <li><a href="gradguidewellness.html">Wellness</a></li>
+      <li><a href="gradguidestudy.html">Study Groups</a></li>
+      <li><a href="gradguidesurvival.html">Survival Guide</a></li>
+      <li><a href="gradguideloginpage.html" class="auth-link" id="authLink">Log In</a></li>
+      <li><a href="gradguidefood.html" class="nav-cta">🍽️ Order Food</a></li>
+    </ul>
+    <div class="nav-right">
+      <button class="theme-toggle" id="themeToggle"><span class="toggle-icon sun">☀️</span><span class="toggle-icon moon">🌙</span></button>
+      <button class="hamburger" id="hamburger"><span></span><span></span><span></span></button>
+    </div>
+    <div class="mobile-menu" id="mobileMenu">
+      <a href="gradguide.html">🏠 Home</a>
+      <a href="gradguideevents.html">🗓️ Events</a>
+      <a href="gradguidewellness.html">🧠 Wellness</a>
+      <a href="gradguidestudy.html">👥 Study Groups</a>
+      <a href="gradguidesurvival.html">📖 Survival Guide</a>
+      <a href="gradguideloginpage.html" class="auth-link" id="authLinkMobile">🔑 Log In</a>
+      <a href="gradguidefood.html" class="nav-cta">🍽️ Order Food</a>
+    </div>
+  </nav>
+
+  <div class="page-header">
+    <span class="badge">Student Handbook</span>
+    <h1>The PCU Student <em>Survival Guide</em></h1>
+    <p>Everything you need to know to survive and thrive at Precious Cornerstone University. Real tips from real students.</p>
+  </div>
+
+  <div class="main">
+
+    <!-- QUICK STATS -->
+    <div class="quick-banner">
+      <div class="quick-stat"><span class="num">6</span><span class="label">Survival Categories</span></div>
+      <div class="quick-stat"><span class="num">40+</span><span class="label">Practical Tips</span></div>
+      <div class="quick-stat"><span class="num">4</span><span class="label">Years Covered</span></div>
+      <div class="quick-stat"><span class="num">100%</span><span class="label">Student Tested</span></div>
+    </div>
+
+    <!-- FILTER TABS -->
+    <div class="filter-row" id="filterTabs">
+      <button class="tab-btn active" data-cat="all">📚 All Tips</button>
+      <button class="tab-btn" data-cat="academics">🎓 Academics</button>
+      <button class="tab-btn" data-cat="money">💸 Money</button>
+      <button class="tab-btn" data-cat="health">😴 Health</button>
+      <button class="tab-btn" data-cat="social">🤝 Social Life</button>
+      <button class="tab-btn" data-cat="tech">💻 Tech & Tools</button>
+      <button class="tab-btn" data-cat="campus">🏫 Campus Life</button>
+    </div>
+
+    <!-- ACCORDION -->
+    <div class="accordion" id="accordion"></div>
+
+  </div>
+
+  <footer><p>Built By Taiwo Emmanuel for students · <span>GradGuide</span> · PCU · Precious Cornerstone University</p></footer>
+
+  <script>
+    // THEME
+    const html = document.documentElement;
+    const saved = localStorage.getItem('gradguide-theme');
+    if (saved) html.setAttribute('data-theme', saved);
+    document.getElementById('themeToggle').addEventListener('click', () => {
+      const next = html.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+      html.setAttribute('data-theme', next); localStorage.setItem('gradguide-theme', next);
+    });
+    const hamburger = document.getElementById('hamburger');
+    const mobileMenu = document.getElementById('mobileMenu');
+    hamburger.addEventListener('click', () => { hamburger.classList.toggle('open'); mobileMenu.classList.toggle('open'); });
+    mobileMenu.querySelectorAll('a').forEach(l => l.addEventListener('click', () => { hamburger.classList.remove('open'); mobileMenu.classList.remove('open'); }));
+
+    // DATA
+    const sections = [
+      {
+        cat: 'academics',
+        icon: '🎓',
+        title: 'Acing Your Academics',
+        subtitle: '8 tips to stay on top of your studies',
+        tips: [
+          { t: 'Attend every class', d: 'It sounds obvious but <strong>showing up is 70% of success</strong>. Lecturers notice attendance and it directly affects your CA scores.' },
+          { t: 'Start assignments early', d: 'Never start an assignment the night before. Start the same day it is given. Even writing just the title breaks the procrastination cycle.' },
+          { t: 'Form or join a study group', d: 'Use GradGuide\'s Study Group Finder to connect with classmates in your course. <strong>Teaching others is the fastest way to understand a topic.</strong>' },
+          { t: 'Use past questions', d: 'Get past exam questions from your department or seniors. Most lecturers repeat question patterns — <strong>past questions are gold.</strong>' },
+          { t: 'Visit your lecturers during office hours', d: 'Most students never do this. Walking into a lecturer\'s office shows initiative and they will <strong>remember you during grading.</strong>' },
+          { t: 'Take handwritten notes', d: 'Research shows handwriting helps you retain information better than typing. Keep a dedicated notebook for each course.' },
+          { t: 'Review notes within 24 hours', d: 'After every class, spend 10 minutes reviewing what you wrote. This alone can <strong>triple your retention rate.</strong>' },
+          { t: 'Do not cram — space your studying', d: 'Study a little every day rather than all night before exams. Your brain learns better in short repeated sessions than marathon cram sessions.' },
+        ]
+      },
+      {
+        cat: 'money',
+        icon: '💸',
+        title: 'Managing Your Money',
+        subtitle: '6 tips to stretch your budget',
+        tips: [
+          { t: 'Track every naira you spend', d: 'Write down everything you spend in a week. Most students are shocked at where their money actually goes. <strong>Awareness is the first step.</strong>' },
+          { t: 'Use GradGuide to order food ahead', d: 'Ordering food through GradGuide saves you time and helps you <strong>avoid impulse purchases</strong> while standing in long queues.' },
+          { t: 'Set a weekly budget and stick to it', d: 'Divide your monthly allowance by 4. That\'s your weekly budget. Once it\'s gone — it\'s gone. This builds discipline fast.' },
+
+          { t: 'Avoid borrowing money for non-essentials', d: 'Only borrow for true emergencies like school fees or medical issues. Social borrowing creates stress and damages friendships.' },
+          { t: 'Save at least 10% of every allowance', d: 'Before spending anything, put 10% aside. Over a semester this becomes a meaningful emergency fund.' },
+          { t: 'Look for student discounts', d: 'Your student ID card unlocks discounts in many places. Always ask — the worst they can say is no.' },
+        ]
+      },
+      {
+        cat: 'health',
+        icon: '😴',
+        title: 'Sleep, Health & Energy',
+        subtitle: '7 tips to keep your body and mind strong',
+        tips: [
+          { t: 'Sleep at least 7 hours', d: 'Sleep is when your brain consolidates everything you studied. <strong>Sleeping after studying is not lazy — it is smart.</strong>' },
+          { t: 'Eat breakfast every morning', d: 'Students who skip breakfast have lower concentration and worse exam performance. Even a small meal makes a huge difference.' },
+          { t: 'Drink enough water', d: 'Dehydration causes fatigue, headaches and poor focus. Carry a water bottle to class every day.' },
+          { t: 'Take walk breaks between study sessions', d: 'After 45-50 minutes of studying, take a 10-minute walk. This resets your focus and <strong>dramatically improves productivity.</strong>' },
+          { t: 'Limit all-nighters', d: 'One all-nighter wipes out 2 days of productivity. If you must stay up, stop by 2AM and sleep. A rested brain outperforms a tired one.' },
+          { t: 'Exercise at least twice a week', d: 'Even a 20-minute walk or short workout boosts mood, reduces stress and improves memory. Use the PCU sports complex!' },
+          { t: 'Visit the campus clinic early', d: 'Do not wait until you are very sick. If you feel unwell, visit the clinic early. Minor issues become major ones when ignored.' },
+        ]
+      },
+      {
+        cat: 'social',
+        icon: '🤝',
+        title: 'Social Life & Relationships',
+        subtitle: '6 tips for a healthy campus social life',
+        tips: [
+          { t: 'Join at least one club or association', d: 'Whether it\'s NACOS, a fellowship, or a sports team — <strong>belonging to a community reduces loneliness</strong> and opens opportunities.' },
+          { t: 'Attend NACOS Week events', d: 'Department week events are where friendships are made, networks are built, and memories are created. Don\'t miss them!' },
+          { t: 'Choose your close friends wisely', d: 'You become like the people you spend the most time with. Surround yourself with people who are serious about their future.' },
+          { t: 'Respect boundaries — yours and others', d: 'Learn to say no without guilt. Protecting your time, energy and values is not selfish — it is necessary for long-term success.' },
+          { t: 'Resolve conflicts early', d: 'Small misunderstandings grow into big problems when ignored. Address issues calmly and directly before they escalate.' },
+          { t: 'Do not compare your journey to others', d: 'Social media makes everyone else\'s life look perfect. Focus on your own progress. <strong>Your pace is valid.</strong>' },
+        ]
+      },
+      {
+        cat: 'tech',
+        icon: '💻',
+        title: 'Tech & Productivity Tools',
+        subtitle: '6 tools every PCU student should use',
+        tips: [
+          { t: 'Use Google Drive for everything', d: 'Store all your notes, assignments and projects on Google Drive. If your phone or laptop dies, <strong>you lose nothing.</strong>' },
+          { t: 'Use Google Calendar for deadlines', d: 'Add every assignment deadline and exam date to Google Calendar with a reminder. Never miss a submission again.' },
+          { t: 'Learn to type fast', d: 'Typing speed directly affects how quickly you can complete assignments, take notes and work in the industry. Practice on Keybr.com — it\'s free.' },
+          { t: 'Use GradGuide daily', d: 'Check the Events Board for what\'s happening, order food ahead, find study groups and read survival tips — all in one place.' },
+          { t: 'Learn basic Microsoft Office', d: 'Word, Excel and PowerPoint are used in every course and every job. Mastering the basics saves you hours every semester.' },
+          { t: 'Use ChatGPT or Claude for learning', d: 'AI tools are powerful study companions. Use them to explain concepts, check your writing, or brainstorm ideas — <strong>not to do your work for you.</strong>' },
+        ]
+      },
+      {
+        cat: 'campus',
+        icon: '🏫',
+        title: 'Navigating Campus Life',
+        subtitle: '6 things every PCU student should know',
+        tips: [
+          { t: 'Know your department\'s office location', d: 'The department office is where you handle results, deferments, and important paperwork. Know where it is before you need it urgently.' },
+          { t: 'Build a good relationship with your HOD and lecturers', d: 'Greet them, participate in class, and show genuine interest. <strong>Lecturers go the extra mile for students they know and respect.</strong>' },
+          { t: 'Arrive early to important events', d: 'Exams, registration, clearance — arriving 30 minutes early saves you from unnecessary stress and long queues.' },
+          { t: 'Keep all your school documents safe', d: 'Store digital copies of your admission letter, school ID, receipts and results on Google Drive. Physical documents get lost.' },
+          { t: 'Use GradGuide\'s Food Order to skip queues', d: 'The cafeteria queue during lunch can waste 30+ minutes of your day. Order ahead, get your pickup ID and go straight to the counter.' },
+          { t: 'Speak up when something is wrong', d: 'If you have a genuine complaint — about a grade, a facility or anything — report it through the right channels. <strong>Your voice matters.</strong>' },
+        ]
+      },
+    ];
+
+    let currentCat = 'all';
+
+    function renderAccordion() {
+      const container = document.getElementById('accordion');
+      const filtered = currentCat === 'all' ? sections : sections.filter(s => s.cat === currentCat);
+      container.innerHTML = filtered.map((s, i) => `
+        <div class="accordion-item" id="acc-${i}">
+          <div class="accordion-header" onclick="toggleAccordion(${i})">
+            <span class="accordion-icon">${s.icon}</span>
+            <div class="accordion-title">
+              <h3>${s.title}</h3>
+              <span>${s.subtitle}</span>
+            </div>
+            <span class="accordion-arrow">▼</span>
+          </div>
+          <div class="accordion-body">
+            <div class="tip-list">
+              ${s.tips.map((t, j) => `
+                <div class="tip">
+                  <span class="tip-num">${j+1}</span>
+                  <p><strong>${t.t}.</strong> ${t.d}</p>
+                </div>
+              `).join('')}
+            </div>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function toggleAccordion(i) {
+      const item = document.getElementById('acc-' + i);
+      item.classList.toggle('open');
+    }
+
+    document.getElementById('filterTabs').addEventListener('click', e => {
+      if (!e.target.matches('.tab-btn')) return;
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      e.target.classList.add('active');
+      currentCat = e.target.dataset.cat;
+      renderAccordion();
+    });
+
+    renderAccordion();
+  </script>
+  <!-- AUTH NAV FLIP: show "Log out" when signed in -->
+  <script>
+    (async () => {
+      try {
+        const { data } = await db.auth.getSession();
+        if (data.session) {
+          document.querySelectorAll('.auth-link').forEach(el => {
+            el.textContent = el.id === 'authLinkMobile' ? '🔑 Log out' : 'Log out';
+            el.href = '#';
+            el.addEventListener('click', (e) => { e.preventDefault(); gradguideLogout(); });
+          });
+        }
+      } catch (err) {
+        console.error('Auth nav check failed:', err);
+      }
+    })();
+  </script>
+</body>
+</html>

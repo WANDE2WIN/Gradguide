@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>GradGuide — NACOS Week 2026</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="gradguide-auth.js"></script>
+  <script>gradguideRequireLogin();</script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Playfair+Display:ital,wght@0,700;1,700&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    [data-theme="light"] {
+      --bg: #F0F4F0; --card: #ffffff; --text: #1A1A2E; --muted: #556B5A;
+      --border: rgba(45,106,79,0.15); --green: #2D6A4F; --lime: #52B788;
+      --soft: #D8EDDF; --red: #E63946; --yellow: #F4A261; --blue: #4A90D9;
+      --nav-bg: rgba(240,244,240,0.55); --nav-border: rgba(255,255,255,0.6);
+      --nav-shadow: rgba(45,106,79,0.12); --feat-bg: #1A1A2E;
+    }
+    [data-theme="dark"] {
+      --bg: #0F1A14; --card: #1C2B1F; --text: #E8F5EE; --muted: #8FBFA0;
+      --border: rgba(82,183,136,0.2); --green: #52B788; --lime: #74C69D;
+      --soft: #1C2B1F; --red: #FF6B6B; --yellow: #FFB347; --blue: #6AABF7;
+      --nav-bg: rgba(15,26,20,0.55); --nav-border: rgba(82,183,136,0.25);
+      --nav-shadow: rgba(0,0,0,0.4); --feat-bg: #0A1209;
+    }
+
+    body { font-family: 'Outfit', sans-serif; background: var(--bg); color: var(--text); transition: background 0.35s, color 0.35s; }
+
+    /* NAV */
+    nav { display: flex; justify-content: space-between; align-items: center; padding: 0.9rem 2.5rem; background: var(--nav-bg); backdrop-filter: blur(22px) saturate(180%); -webkit-backdrop-filter: blur(22px) saturate(180%); border-bottom: 1px solid var(--nav-border); box-shadow: 0 4px 32px var(--nav-shadow), inset 0 1px 0 rgba(255,255,255,0.3); position: sticky; top: 0; z-index: 100; border-radius: 0 0 18px 18px; }
+    .logo { font-family: 'Playfair Display', serif; font-size: 1.7rem; font-weight: 700; font-style: italic; color: var(--green); text-decoration: none; }
+    .logo span { font-style: normal; color: var(--lime); }
+    nav ul { list-style: none; display: flex; align-items: center; gap: 0.3rem; }
+    nav ul li a { text-decoration: none; color: var(--text); font-weight: 500; font-size: 0.9rem; padding: 0.45rem 0.9rem; border-radius: 50px; transition: background 0.2s, color 0.2s; }
+    nav ul li a:hover { background: rgba(82,183,136,0.15); color: var(--green); }
+    .nav-cta { background: var(--green) !important; color: #fff !important; padding: 0.5rem 1.1rem !important; border-radius: 50px !important; font-weight: 600 !important; }
+    .nav-right { display: flex; align-items: center; gap: 1rem; }
+    .theme-toggle { background: var(--soft); border: 1.5px solid var(--border); border-radius: 50px; width: 52px; height: 28px; cursor: pointer; position: relative; transition: background 0.3s; flex-shrink: 0; }
+    .theme-toggle::after { content: ''; position: absolute; top: 3px; left: 3px; width: 20px; height: 20px; border-radius: 50%; background: var(--green); transition: transform 0.3s; box-shadow: 0 2px 6px rgba(0,0,0,0.2); }
+    [data-theme="dark"] .theme-toggle::after { transform: translateX(24px); background: var(--lime); }
+    .toggle-icon { position: absolute; top: 50%; transform: translateY(-50%); font-size: 0.65rem; pointer-events: none; }
+    .toggle-icon.sun { left: 6px; } .toggle-icon.moon { right: 6px; }
+    .hamburger { display: none; flex-direction: column; gap: 5px; cursor: pointer; background: none; border: none; padding: 4px; }
+    .hamburger span { display: block; width: 24px; height: 2.5px; background: var(--text); border-radius: 4px; transition: all 0.3s; }
+    .hamburger.open span:nth-child(1) { transform: translateY(7.5px) rotate(45deg); }
+    .hamburger.open span:nth-child(2) { opacity: 0; }
+    .hamburger.open span:nth-child(3) { transform: translateY(-7.5px) rotate(-45deg); }
+    .mobile-menu { display: none; flex-direction: column; gap: 0.3rem; position: absolute; top: calc(100% + 8px); left: 1rem; right: 1rem; background: var(--nav-bg); backdrop-filter: blur(22px) saturate(180%); border: 1px solid var(--nav-border); border-radius: 16px; padding: 1rem; box-shadow: 0 8px 32px var(--nav-shadow); z-index: 99; }
+    .mobile-menu.open { display: flex; }
+    .mobile-menu a { text-decoration: none; color: var(--text); font-weight: 500; font-size: 1rem; padding: 0.7rem 1rem; border-radius: 10px; transition: background 0.2s; }
+    .mobile-menu a:hover { background: rgba(82,183,136,0.15); color: var(--green); }
+    .mobile-menu .nav-cta { background: var(--green) !important; color: #fff !important; text-align: center; margin-top: 0.3rem; }
+    @media (max-width: 640px) { nav ul { display: none; } .hamburger { display: flex; } }
+
+    /* HERO BANNER */
+    .hero-banner {
+      background: linear-gradient(135deg, #0a1a0f 0%, #1a3a25 50%, #0a1a0f 100%);
+      padding: 4rem 2.5rem 3rem;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+    }
+    .hero-banner::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(ellipse at 50% 0%, rgba(82,183,136,0.2) 0%, transparent 70%);
+    }
+    .hero-banner > * { position: relative; z-index: 1; }
+    .nacos-badge {
+      display: inline-flex; align-items: center; gap: 0.5rem;
+      background: rgba(82,183,136,0.15);
+      border: 1px solid rgba(82,183,136,0.4);
+      color: var(--lime);
+      font-size: 0.8rem; font-weight: 700;
+      padding: 0.4rem 1.1rem; border-radius: 50px;
+      letter-spacing: 0.08em; text-transform: uppercase;
+      margin-bottom: 1.2rem;
+    }
+    .hero-banner h1 { font-family: 'Playfair Display', serif; font-size: clamp(2.2rem, 6vw, 4rem); font-weight: 700; color: #fff; margin-bottom: 0.5rem; }
+    .hero-banner h1 em { font-style: italic; color: #74C69D; }
+    .hero-banner .sub { color: rgba(255,255,255,0.65); font-size: 1rem; margin-bottom: 2rem; }
+    .hero-meta { display: flex; justify-content: center; gap: 2rem; flex-wrap: wrap; }
+    .hero-meta span { color: rgba(255,255,255,0.8); font-size: 0.9rem; font-weight: 500; display: flex; align-items: center; gap: 0.4rem; }
+
+    /* COUNTDOWN */
+    .countdown-strip {
+      background: var(--green);
+      padding: 1.5rem 2.5rem;
+      display: flex; align-items: center; justify-content: center; gap: 3rem;
+      flex-wrap: wrap;
+    }
+    .countdown-strip .label { color: rgba(255,255,255,0.8); font-size: 0.85rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; }
+    .countdown-timer { display: flex; gap: 1rem; }
+    .cd-unit { text-align: center; background: rgba(255,255,255,0.15); border-radius: 10px; padding: 0.5rem 0.9rem; min-width: 58px; }
+    .cd-num { font-family: 'Playfair Display', serif; font-size: 1.8rem; font-weight: 700; color: #fff; display: block; line-height: 1; }
+    .cd-sub { font-size: 0.65rem; color: rgba(255,255,255,0.75); text-transform: uppercase; letter-spacing: 0.06em; }
+
+    /* MAIN */
+    .main { max-width: 1000px; margin: 0 auto; padding: 3rem 2rem 5rem; }
+    @media (max-width: 640px) { .main { padding: 2rem 1.2rem 3rem; } }
+
+    .section-intro { text-align: center; margin-bottom: 2.5rem; }
+    .section-intro h2 { font-family: 'Playfair Display', serif; font-size: 1.8rem; font-weight: 700; margin-bottom: 0.4rem; }
+    .section-intro p { color: var(--muted); font-size: 0.95rem; }
+
+    /* DAY CARDS */
+    .days-list { display: flex; flex-direction: column; gap: 1.8rem; }
+
+    .day-card {
+      background: var(--card);
+      border-radius: 20px;
+      overflow: hidden;
+      border: 1.5px solid var(--border);
+      display: grid;
+      grid-template-columns: 280px 1fr;
+      transition: box-shadow 0.2s, transform 0.2s;
+      box-shadow: 0 2px 12px var(--nav-shadow);
+    }
+    .day-card:hover { transform: translateY(-3px); box-shadow: 0 12px 32px var(--nav-shadow); }
+    .day-card.featured { border-color: var(--green); border-width: 2px; }
+
+    .day-img-wrap { position: relative; overflow: hidden; }
+    .day-img { width: 100%; height: 100%; object-fit: cover; display: block; min-height: 220px; }
+    .day-img.flyer { object-fit: contain; background: #111; }
+
+    .day-number-badge {
+      position: absolute; top: 1rem; left: 1rem;
+      background: var(--green); color: #fff;
+      font-size: 0.72rem; font-weight: 800;
+      padding: 0.3rem 0.8rem; border-radius: 50px;
+      text-transform: uppercase; letter-spacing: 0.06em;
+    }
+    .day-card.featured .day-number-badge { background: var(--yellow); color: #1A1A2E; }
+
+    .day-body { padding: 1.8rem; display: flex; flex-direction: column; justify-content: center; }
+    .day-date { font-size: 0.78rem; font-weight: 700; color: var(--green); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 0.4rem; }
+    .day-card.featured .day-date { color: var(--yellow); }
+    .day-body h2 { font-family: 'Playfair Display', serif; font-size: 1.4rem; font-weight: 700; margin-bottom: 0.6rem; line-height: 1.3; }
+    .day-body p { font-size: 0.9rem; color: var(--muted); line-height: 1.7; margin-bottom: 1.2rem; }
+
+    .event-pills { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+    .pill {
+      font-size: 0.78rem; font-weight: 600;
+      padding: 0.3rem 0.85rem; border-radius: 50px;
+      display: flex; align-items: center; gap: 0.3rem;
+    }
+    .pill-green { background: rgba(82,183,136,0.15); color: var(--green); }
+    .pill-yellow { background: rgba(244,162,97,0.15); color: var(--yellow); }
+    .pill-blue { background: rgba(74,144,217,0.15); color: var(--blue); }
+    .pill-red { background: rgba(230,57,70,0.15); color: var(--red); }
+    .pill-gold { background: rgba(255,215,0,0.15); color: #B8860B; }
+
+    .day-time { font-size: 0.82rem; color: var(--muted); margin-top: 1rem; display: flex; align-items: center; gap: 0.4rem; }
+
+    @media (max-width: 700px) {
+      .day-card { grid-template-columns: 1fr; }
+      .day-img { min-height: 200px; max-height: 260px; }
+    }
+
+    /* FOOTER */
+    footer { background: var(--feat-bg); color: #556B5A; text-align: center; padding: 2rem; font-size: 0.88rem; }
+    footer span { color: var(--lime); }
+  </style>
+</head>
+<body>
+
+  <!-- NAV -->
+  <nav>
+    <a href="gradguide.html" class="logo"><em>Grad</em><span>Guide</span></a>
+    <ul>
+      <li><a href="gradguide.html">🏠 Home</a></li>
+      <li><a href="gradguideevents.html">Events</a></li>
+      <li><a href="gradguidewellness.html">Wellness</a></li>
+      <li><a href="gradguidestudy.html">Study Groups</a></li>
+      <li><a href="gradguidesurvival.html">Survival Guide</a></li>
+      <li><a href="gradguideloginpage.html" class="auth-link" id="authLink">Log In</a></li>
+      <li><a href="gradguidefood.html" class="nav-cta">🍽️ Order Food</a></li>
+    </ul>
+    <div class="nav-right">
+      <button class="theme-toggle" id="themeToggle" aria-label="Toggle dark mode">
+        <span class="toggle-icon sun">☀️</span>
+        <span class="toggle-icon moon">🌙</span>
+      </button>
+      <button class="hamburger" id="hamburger" aria-label="Open menu">
+        <span></span><span></span><span></span>
+      </button>
+    </div>
+    <div class="mobile-menu" id="mobileMenu">
+      <a href="gradguide.html">🏠 Home</a>
+      <a href="gradguideevents.html">🗓️ Events</a>
+      <a href="gradguidewellness.html">🧠 Wellness</a>
+      <a href="gradguidestudy.html">👥 Study Groups</a>
+      <a href="gradguidesurvival.html">📖 Survival Guide</a>
+      <a href="gradguideloginpage.html" class="auth-link" id="authLinkMobile">🔑 Log In</a>
+      <a href="gradguidefood.html" class="nav-cta">🍽️ Order Food</a>
+    </div>
+  </nav>
+
+  <!-- HERO -->
+  <div class="hero-banner">
+    <div class="nacos-badge">🎓 Precious Cornerstone University</div>
+    <h1>NACOS <em>Week '26</em></h1>
+    <p class="sub">Nigeria Association of Computing Students · PCU Chapter</p>
+    <div class="hero-meta">
+      <span>📅 June 15–19, 2026</span>
+      <span>📍 PCU Campus</span>
+      <span>⚡ 5 Days of Events</span>
+    </div>
+  </div>
+
+  <!-- COUNTDOWN -->
+  <div class="countdown-strip">
+    <span class="label">🏆 Hackathon starts in</span>
+    <div class="countdown-timer">
+      <div class="cd-unit"><span class="cd-num" id="cd-days">00</span><span class="cd-sub">Days</span></div>
+      <div class="cd-unit"><span class="cd-num" id="cd-hours">00</span><span class="cd-sub">Hours</span></div>
+      <div class="cd-unit"><span class="cd-num" id="cd-mins">00</span><span class="cd-sub">Mins</span></div>
+      <div class="cd-unit"><span class="cd-num" id="cd-secs">00</span><span class="cd-sub">Secs</span></div>
+    </div>
+  </div>
+
+  <!-- MAIN -->
+  <div class="main">
+    <div class="section-intro">
+      <h2>Full Week Schedule</h2>
+      <p>Five days of tech, culture, sports, and celebration at PCU</p>
+    </div>
+
+    <div class="days-list">
+
+      <!-- DAY 1 -->
+      <div class="day-card">
+        <div class="day-img-wrap">
+          <img class="day-img flyer" src="IMG-20260602-WA0005.jpg" alt="Bezaleel Conference Flyer" loading="lazy"/>
+          <span class="day-number-badge">Day 1 · Mon June 15</span>
+        </div>
+        <div class="day-body">
+          <div class="day-date">Monday, June 15, 2026</div>
+          <h2>The Bezaleel Conference '26 & Inter-Departmental Debate</h2>
+          <p>Kick off NACOS Week with <strong>The Bezaleel Conference</strong> — themed <em>"Recalibrate: Craftsmanship Beyond the Four Walls of the School."</em> Featuring industry speakers including the Founder of The Bezaleel Network, NACOS PCU President, and tech leaders. The day closes with a fierce Inter-Departmental Debate at the University Auditorium.</p>
+          <div class="event-pills">
+            <span class="pill pill-green"> Conference · 10:00 AM</span>
+            <span class="pill pill-blue"> Debate · 2:00 PM</span>
+            <span class="pill pill-yellow">📍 University Auditorium</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- DAY 2 -->
+      <div class="day-card featured">
+        <div class="day-img-wrap">
+          <img class="day-img flyer" src="PCU DAY 2.jpg" alt="Inter-Departmental Debate Bracket" loading="lazy"/>
+          <span class="day-number-badge">Day 2 · Tue June 16 </span>
+        </div>
+        <div class="day-body">
+          <div class="day-date">Tuesday, June 16, 2026 · Technology & Innovation Day</div>
+          <h2>Panel Session, Demo Presentations & Movie Night 🎬</h2>
+          <p>The biggest day of NACOS Week! Morning kicks off with a <strong>Technology & Innovation Panel Session</strong>, followed by exciting <strong>Demo Presentations</strong> where students showcase projects built to solve real campus problems. The day wraps up with a <strong>Movie Night</strong> at the FPAS Seminar Room.</p>
+          <div class="event-pills">
+            <span class="pill pill-blue"> Panel Session · Morning</span>
+            <span class="pill pill-green"> Demo Presentations · Afternoon</span>
+            <span class="pill pill-red"> Movie Night · 6:00 PM</span>
+            <span class="pill pill-yellow"> FPAS Seminar Room</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- DAY 3 -->
+      <div class="day-card">
+        <div class="day-img-wrap">
+          <img class="day-img" src="https://images.unsplash.com/photo-1461896836934-ffe607ba8211?w=600&q=80" alt="Sports Day" loading="lazy"/>
+          <span class="day-number-badge">Day 3 · Wed June 17</span>
+        </div>
+        <div class="day-body">
+          <div class="day-date">Wednesday, June 17, 2026</div>
+          <h2>Sports Day ⚽🏀</h2>
+          <p>Take a break from the screens and hit the field! NACOS Sports Day brings together students for friendly competitions across football, basketball, and more. Cheer on your classmates and show your team spirit.</p>
+          <div class="event-pills">
+            <span class="pill pill-green">⚽ Football</span>
+            <span class="pill pill-blue">🏀 Basketball</span>
+            <span class="pill pill-yellow"> PCU Sports Complex</span>
+            <span class="pill pill-red">🏅 Prizes Available</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- DAY 4 -->
+      <div class="day-card">
+        <div class="day-img-wrap">
+          <img class="day-img flyer" src="IMG-20260604-WA0025.jpg" alt="IITA Excursion Flyer" loading="lazy"/>
+          <span class="day-number-badge">Day 4 · Thu June 18</span>
+        </div>
+        <div class="day-body">
+          <div class="day-date">Thursday, June 18, 2026</div>
+          <h2>Excursion to IITA Ibadan & Ventura 🌿</h2>
+          <p>Step off campus and explore the world! NACOS takes students on an excursion to the <strong>International Institute of Tropical Agriculture (IITA) in Ibadan</strong> — one of Africa's leading research centres — followed by a visit to <strong>Ventura</strong> for fun and recreation.</p>
+          <div class="event-pills">
+            <span class="pill pill-green">🌿 IITA Ibadan Visit</span>
+            <span class="pill pill-blue">🎡 Ventura Recreation</span>
+            <span class="pill pill-yellow">📍 Off Campus</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- DAY 5 -->
+      <div class="day-card">
+        <div class="day-img-wrap">
+          <img class="day-img" src="https://images.unsplash.com/photo-1519167758481-83f550bb49b3?w=600&q=80" alt="Award/Dinner Night" loading="lazy"/>
+          <span class="day-number-badge">Day 5 · Fri June 19</span>
+        </div>
+        <div class="day-body">
+          <div class="day-date">Friday, June 19, 2026</div>
+          <h2>Award/Dinner Night 🏆✨</h2>
+          <p>Close out NACOS Week in style! The Award Dinner Night celebrates outstanding students, competition winners, and the best demo presentations of the week. Dress up, enjoy great food, and celebrate the end of an unforgettable week.</p>
+          <div class="event-pills">
+            <span class="pill pill-gold"> Award Ceremony</span>
+            <span class="pill pill-yellow"> Dinner</span>
+            <span class="pill pill-green"> Closing Celebration</span>
+            <span class="pill pill-blue"> Smart Casual Dress</span>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <footer>
+    <p>Built By Taiwo Emmanuel for students · <span>GradGuide</span> · NACOS PCU · Precious Cornerstone University</p>
+  </footer>
+
+  <script>
+    // THEME
+    const html = document.documentElement;
+    const saved = localStorage.getItem('gradguide-theme');
+    if (saved) html.setAttribute('data-theme', saved);
+    document.getElementById('themeToggle').addEventListener('click', () => {
+      const next = html.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+      html.setAttribute('data-theme', next);
+      localStorage.setItem('gradguide-theme', next);
+    });
+
+    // HAMBURGER
+    const hamburger = document.getElementById('hamburger');
+    const mobileMenu = document.getElementById('mobileMenu');
+    hamburger.addEventListener('click', () => { hamburger.classList.toggle('open'); mobileMenu.classList.toggle('open'); });
+    mobileMenu.querySelectorAll('a').forEach(l => l.addEventListener('click', () => { hamburger.classList.remove('open'); mobileMenu.classList.remove('open'); }));
+
+    // COUNTDOWN to Hackathon (June 16 Demo Day)
+    const hackDate = new Date('2026-06-16T09:00:00');
+    function updateCD() {
+      const diff = hackDate - new Date();
+      if (diff <= 0) {
+        ['cd-days','cd-hours','cd-mins','cd-secs'].forEach(id => document.getElementById(id).textContent = '00');
+        return;
+      }
+      document.getElementById('cd-days').textContent  = String(Math.floor(diff/86400000)).padStart(2,'0');
+      document.getElementById('cd-hours').textContent = String(Math.floor((diff%86400000)/3600000)).padStart(2,'0');
+      document.getElementById('cd-mins').textContent  = String(Math.floor((diff%3600000)/60000)).padStart(2,'0');
+      document.getElementById('cd-secs').textContent  = String(Math.floor((diff%60000)/1000)).padStart(2,'0');
+    }
+    updateCD();
+    setInterval(updateCD, 1000);
+  </script>
+  <!-- AUTH NAV FLIP: show "Log out" when signed in -->
+  <script>
+    (async () => {
+      try {
+        const { data } = await db.auth.getSession();
+        if (data.session) {
+          document.querySelectorAll('.auth-link').forEach(el => {
+            el.textContent = el.id === 'authLinkMobile' ? '🔑 Log out' : 'Log out';
+            el.href = '#';
+            el.addEventListener('click', (e) => { e.preventDefault(); gradguideLogout(); });
+          });
+        }
+      } catch (err) {
+        console.error('Auth nav check failed:', err);
+      }
+    })();
+  </script>
+</body>
+</html>

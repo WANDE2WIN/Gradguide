@@ -1,0 +1,510 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>GradGuide — Study Groups</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="gradguide-auth.js"></script>
+  <script>gradguideRequireLogin();</script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Playfair+Display:ital,wght@0,700;1,700&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    [data-theme="light"] {
+      --bg: #F0F4F0; --card: #ffffff; --text: #1A1A2E; --muted: #556B5A;
+      --border: rgba(45,106,79,0.15); --green: #2D6A4F; --lime: #52B788;
+      --soft: #D8EDDF; --red: #E63946; --yellow: #F4A261; --blue: #4A90D9;
+      --nav-bg: rgba(240,244,240,0.55); --nav-border: rgba(255,255,255,0.6);
+      --nav-shadow: rgba(45,106,79,0.12); --feat-bg: #1A1A2E;
+    }
+    [data-theme="dark"] {
+      --bg: #0F1A14; --card: #1C2B1F; --text: #E8F5EE; --muted: #8FBFA0;
+      --border: rgba(82,183,136,0.2); --green: #52B788; --lime: #74C69D;
+      --soft: #1C2B1F; --red: #FF6B6B; --yellow: #FFB347; --blue: #6AABF7;
+      --nav-bg: rgba(15,26,20,0.55); --nav-border: rgba(82,183,136,0.25);
+      --nav-shadow: rgba(0,0,0,0.4); --feat-bg: #0A1209;
+    }
+
+    body { font-family: 'Outfit', sans-serif; background: var(--bg); color: var(--text); transition: background 0.35s, color 0.35s; }
+
+    /* NAV */
+    nav { display: flex; justify-content: space-between; align-items: center; padding: 0.9rem 2.5rem; background: var(--nav-bg); backdrop-filter: blur(22px) saturate(180%); -webkit-backdrop-filter: blur(22px) saturate(180%); border-bottom: 1px solid var(--nav-border); box-shadow: 0 4px 32px var(--nav-shadow), inset 0 1px 0 rgba(255,255,255,0.3); position: sticky; top: 0; z-index: 100; border-radius: 0 0 18px 18px; }
+    .logo { font-family: 'Playfair Display', serif; font-size: 1.7rem; font-weight: 700; font-style: italic; color: var(--green); text-decoration: none; }
+    .logo span { font-style: normal; color: var(--lime); }
+    nav ul { list-style: none; display: flex; align-items: center; gap: 0.3rem; }
+    nav ul li a { text-decoration: none; color: var(--text); font-weight: 500; font-size: 0.9rem; padding: 0.45rem 0.9rem; border-radius: 50px; transition: background 0.2s, color 0.2s; }
+    nav ul li a:hover { background: rgba(82,183,136,0.15); color: var(--green); }
+    .nav-cta { background: var(--green) !important; color: #fff !important; padding: 0.5rem 1.1rem !important; border-radius: 50px !important; font-weight: 600 !important; }
+    .nav-right { display: flex; align-items: center; gap: 1rem; }
+    .theme-toggle { background: var(--soft); border: 1.5px solid var(--border); border-radius: 50px; width: 52px; height: 28px; cursor: pointer; position: relative; transition: background 0.3s; flex-shrink: 0; }
+    .theme-toggle::after { content: ''; position: absolute; top: 3px; left: 3px; width: 20px; height: 20px; border-radius: 50%; background: var(--green); transition: transform 0.3s; box-shadow: 0 2px 6px rgba(0,0,0,0.2); }
+    [data-theme="dark"] .theme-toggle::after { transform: translateX(24px); background: var(--lime); }
+    .toggle-icon { position: absolute; top: 50%; transform: translateY(-50%); font-size: 0.65rem; pointer-events: none; }
+    .toggle-icon.sun { left: 6px; } .toggle-icon.moon { right: 6px; }
+    .hamburger { display: none; flex-direction: column; gap: 5px; cursor: pointer; background: none; border: none; padding: 4px; }
+    .hamburger span { display: block; width: 24px; height: 2.5px; background: var(--text); border-radius: 4px; transition: all 0.3s; }
+    .hamburger.open span:nth-child(1) { transform: translateY(7.5px) rotate(45deg); }
+    .hamburger.open span:nth-child(2) { opacity: 0; }
+    .hamburger.open span:nth-child(3) { transform: translateY(-7.5px) rotate(-45deg); }
+    .mobile-menu { display: none; flex-direction: column; gap: 0.3rem; position: absolute; top: calc(100% + 8px); left: 1rem; right: 1rem; background: var(--nav-bg); backdrop-filter: blur(22px) saturate(180%); border: 1px solid var(--nav-border); border-radius: 16px; padding: 1rem; box-shadow: 0 8px 32px var(--nav-shadow); z-index: 99; }
+    .mobile-menu.open { display: flex; }
+    .mobile-menu a { text-decoration: none; color: var(--text); font-weight: 500; font-size: 1rem; padding: 0.7rem 1rem; border-radius: 10px; transition: background 0.2s; }
+    .mobile-menu a:hover { background: rgba(82,183,136,0.15); color: var(--green); }
+    .mobile-menu .nav-cta { background: var(--green) !important; color: #fff !important; text-align: center; margin-top: 0.3rem; }
+    @media (max-width: 640px) { nav ul { display: none; } .hamburger { display: flex; } }
+
+    /* PAGE HEADER */
+    .page-header { background: linear-gradient(150deg, var(--soft) 0%, var(--bg) 70%); padding: 3.5rem 2.5rem 2.5rem; text-align: center; }
+    .badge { background: var(--lime); color: var(--bg); font-size: 0.78rem; font-weight: 700; padding: 0.35rem 1.1rem; border-radius: 50px; letter-spacing: 0.08em; text-transform: uppercase; display: inline-block; margin-bottom: 1rem; }
+    .page-header h1 { font-family: 'Playfair Display', serif; font-size: clamp(2rem, 5vw, 3.2rem); font-weight: 700; margin-bottom: 0.6rem; }
+    .page-header h1 em { font-style: italic; color: var(--green); }
+    .page-header p { color: var(--muted); font-size: 1rem; max-width: 480px; margin: 0 auto; line-height: 1.7; }
+
+    /* STEPS */
+    .steps { display: flex; justify-content: center; gap: 0; margin: 2rem 0 0; flex-wrap: wrap; }
+    .step { display: flex; align-items: center; gap: 0.4rem; font-size: 0.85rem; font-weight: 600; color: var(--muted); }
+    .step.active { color: var(--green); }
+    .step.done { color: var(--lime); }
+    .step-num { width: 28px; height: 28px; border-radius: 50%; border: 2px solid currentColor; display: flex; align-items: center; justify-content: center; font-size: 0.78rem; font-weight: 800; flex-shrink: 0; }
+    .step.done .step-num { background: var(--lime); border-color: var(--lime); color: #fff; }
+    .step.active .step-num { background: var(--green); border-color: var(--green); color: #fff; }
+    .step-arrow { margin: 0 0.6rem; color: var(--border); font-size: 1rem; }
+
+    /* MAIN */
+    .main { max-width: 1000px; margin: 0 auto; padding: 2.5rem 2rem 5rem; }
+    @media (max-width: 640px) { .main { padding: 1.5rem 1.2rem 3rem; } }
+
+    /* SELECTOR SCREENS */
+    .screen { display: none; }
+    .screen.active { display: block; animation: fadeIn 0.3s ease; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+    .screen-title { font-family: 'Playfair Display', serif; font-size: 1.6rem; font-weight: 700; margin-bottom: 0.4rem; }
+    .screen-sub { color: var(--muted); font-size: 0.92rem; margin-bottom: 1.8rem; }
+
+    /* FACULTY CARDS */
+    .faculty-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.2rem; }
+    .faculty-card { background: var(--card); border-radius: 18px; padding: 2rem; border: 2px solid var(--border); cursor: pointer; transition: all 0.2s; text-align: center; }
+    .faculty-card:hover { border-color: var(--green); transform: translateY(-3px); box-shadow: 0 10px 28px var(--nav-shadow); }
+    .faculty-icon { font-size: 2.8rem; margin-bottom: 0.8rem; }
+    .faculty-card h3 { font-family: 'Playfair Display', serif; font-size: 1.1rem; font-weight: 700; margin-bottom: 0.3rem; }
+    .faculty-card p { font-size: 0.82rem; color: var(--muted); }
+
+    /* DEPT CARDS */
+    .dept-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; }
+    .dept-card { background: var(--card); border-radius: 16px; padding: 1.5rem; border: 2px solid var(--border); cursor: pointer; transition: all 0.2s; display: flex; align-items: center; gap: 1rem; }
+    .dept-card:hover { border-color: var(--green); transform: translateY(-2px); box-shadow: 0 8px 20px var(--nav-shadow); }
+    .dept-logo { width: 48px; height: 48px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 0.85rem; font-weight: 800; color: #fff; flex-shrink: 0; letter-spacing: 0.03em; }
+    .dept-info h3 { font-size: 1rem; font-weight: 700; margin-bottom: 0.2rem; }
+    .dept-info p { font-size: 0.78rem; color: var(--muted); }
+
+    /* LEVEL GRID */
+    .level-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; max-width: 500px; }
+    @media (max-width: 500px) { .level-grid { grid-template-columns: repeat(2,1fr); } }
+    .level-card { background: var(--card); border-radius: 16px; padding: 1.5rem; border: 2px solid var(--border); cursor: pointer; transition: all 0.2s; text-align: center; }
+    .level-card:hover { border-color: var(--green); transform: translateY(-2px); }
+    .level-card .lvl-num { font-family: 'Playfair Display', serif; font-size: 1.8rem; font-weight: 700; color: var(--green); display: block; }
+    .level-card .lvl-label { font-size: 0.78rem; color: var(--muted); font-weight: 600; }
+
+    /* BACK BTN */
+    .back-btn { background: none; border: 1.5px solid var(--border); color: var(--muted); font-family: 'Outfit', sans-serif; font-size: 0.88rem; font-weight: 600; padding: 0.45rem 1rem; border-radius: 50px; cursor: pointer; margin-bottom: 1.5rem; transition: all 0.2s; display: inline-flex; align-items: center; gap: 0.4rem; }
+    .back-btn:hover { border-color: var(--green); color: var(--green); }
+
+    /* GROUPS VIEW */
+    .groups-header { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; margin-bottom: 1.5rem; }
+    .groups-context { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+    .ctx-pill { font-size: 0.78rem; font-weight: 700; padding: 0.3rem 0.8rem; border-radius: 50px; background: var(--soft); color: var(--green); }
+    .create-btn { background: var(--green); color: #fff; border: none; padding: 0.6rem 1.4rem; border-radius: 50px; font-family: 'Outfit', sans-serif; font-size: 0.88rem; font-weight: 700; cursor: pointer; transition: opacity 0.2s; }
+    .create-btn:hover { opacity: 0.88; }
+
+    .groups-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(290px, 1fr)); gap: 1.3rem; }
+    .group-card { background: var(--card); border-radius: 18px; padding: 1.6rem; border: 1.5px solid var(--border); transition: transform 0.2s, box-shadow 0.2s; display: flex; flex-direction: column; gap: 0.8rem; }
+    .group-card:hover { transform: translateY(-3px); box-shadow: 0 10px 28px var(--nav-shadow); }
+    .group-top { display: flex; justify-content: space-between; align-items: center; }
+    .group-dept-badge { font-size: 0.72rem; font-weight: 800; padding: 0.25rem 0.75rem; border-radius: 50px; color: #fff; }
+    .group-status { font-size: 0.72rem; font-weight: 700; padding: 0.25rem 0.75rem; border-radius: 50px; }
+    .status-open { background: rgba(82,183,136,0.15); color: var(--green); }
+    .status-full { background: rgba(230,57,70,0.12); color: var(--red); }
+    .group-card h3 { font-family: 'Playfair Display', serif; font-size: 1.05rem; font-weight: 700; line-height: 1.3; }
+    .group-card .course { font-size: 0.82rem; color: var(--green); font-weight: 600; }
+    .group-card p { font-size: 0.85rem; color: var(--muted); line-height: 1.6; }
+
+    /* MEMBERS */
+    .members-list { display: flex; flex-direction: column; gap: 0.5rem; }
+    .member-row { display: flex; align-items: center; gap: 0.7rem; }
+    .member-avatar { width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.75rem; font-weight: 800; color: #fff; flex-shrink: 0; }
+    .member-info { flex: 1; }
+    .member-name { font-size: 0.85rem; font-weight: 700; }
+    .member-detail { font-size: 0.75rem; color: var(--muted); }
+
+    .group-meeting { background: var(--soft); border-radius: 10px; padding: 0.7rem 0.9rem; font-size: 0.82rem; }
+    .group-meeting strong { color: var(--green); }
+
+    .group-footer { display: flex; justify-content: space-between; align-items: center; padding-top: 0.5rem; border-top: 1px solid var(--border); }
+    .member-count { font-size: 0.8rem; color: var(--muted); }
+    .join-btn { background: var(--green); color: #fff; border: none; padding: 0.45rem 1.1rem; border-radius: 50px; font-family: 'Outfit', sans-serif; font-size: 0.82rem; font-weight: 700; cursor: pointer; transition: all 0.2s; }
+    .join-btn.joined { background: var(--soft); color: var(--green); }
+    .join-btn:disabled { background: rgba(230,57,70,0.1); color: var(--red); cursor: not-allowed; }
+
+    /* CREATE MODAL */
+    .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); backdrop-filter: blur(4px); z-index: 200; align-items: center; justify-content: center; padding: 1rem; }
+    .modal-overlay.open { display: flex; }
+    .modal { background: var(--card); border-radius: 24px; padding: 2rem; max-width: 480px; width: 100%; box-shadow: 0 20px 60px rgba(0,0,0,0.25); animation: popIn 0.3s cubic-bezier(0.34,1.56,0.64,1); max-height: 90vh; overflow-y: auto; }
+    @keyframes popIn { from { transform: scale(0.85); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+    .modal h2 { font-family: 'Playfair Display', serif; font-size: 1.3rem; font-weight: 700; margin-bottom: 1.2rem; }
+    .form-group { margin-bottom: 0.9rem; }
+    .form-group label { display: block; font-size: 0.82rem; font-weight: 600; margin-bottom: 0.35rem; color: var(--muted); }
+    .form-group input, .form-group select, .form-group textarea { width: 100%; background: var(--bg); border: 1.5px solid var(--border); border-radius: 10px; padding: 0.65rem 0.9rem; font-family: 'Outfit', sans-serif; font-size: 0.9rem; color: var(--text); outline: none; transition: border-color 0.2s; }
+    .form-group input:focus, .form-group select:focus, .form-group textarea:focus { border-color: var(--green); }
+    .form-group textarea { resize: vertical; min-height: 70px; }
+    .modal-btns { display: flex; gap: 0.8rem; margin-top: 1.2rem; }
+    .modal-submit { flex: 1; background: var(--green); color: #fff; border: none; padding: 0.8rem; border-radius: 50px; font-family: 'Outfit', sans-serif; font-size: 0.95rem; font-weight: 700; cursor: pointer; }
+    .modal-cancel { background: var(--soft); color: var(--text); border: none; padding: 0.8rem 1.2rem; border-radius: 50px; font-family: 'Outfit', sans-serif; font-size: 0.95rem; font-weight: 600; cursor: pointer; }
+
+    .toast { position: fixed; bottom: 2rem; left: 50%; transform: translateX(-50%) translateY(100px); background: var(--green); color: #fff; padding: 0.8rem 1.8rem; border-radius: 50px; font-weight: 600; font-size: 0.92rem; z-index: 300; transition: transform 0.4s cubic-bezier(0.34,1.56,0.64,1); box-shadow: 0 8px 24px rgba(0,0,0,0.2); white-space: nowrap; }
+    .toast.show { transform: translateX(-50%) translateY(0); }
+
+    footer { background: var(--feat-bg); color: #556B5A; text-align: center; padding: 2rem; font-size: 0.88rem; }
+    footer span { color: var(--lime); }
+  </style>
+</head>
+<body>
+
+  <nav>
+    <a href="gradguide.html" class="logo"><em>Grad</em><span>Guide</span></a>
+    <ul>
+      <li><a href="gradguide.html">🏠 Home</a></li>
+      <li><a href="gradguideevents.html">Events</a></li>
+      <li><a href="gradguidewellness.html">Wellness</a></li>
+      <li><a href="gradguidestudy.html">Study Groups</a></li>
+      <li><a href="gradguidesurvival.html">Survival Guide</a></li>
+      <li><a href="gradguideloginpage.html" class="auth-link" id="authLink">Log In</a></li>
+      <li><a href="gradguidefood.html" class="nav-cta">🍽️ Order Food</a></li>
+    </ul>
+    <div class="nav-right">
+      <button class="theme-toggle" id="themeToggle"><span class="toggle-icon sun">☀️</span><span class="toggle-icon moon">🌙</span></button>
+      <button class="hamburger" id="hamburger"><span></span><span></span><span></span></button>
+    </div>
+    <div class="mobile-menu" id="mobileMenu">
+      <a href="gradguide.html">🏠 Home</a>
+      <a href="gradguideevents.html">🗓️ Events</a>
+      <a href="gradguidewellness.html">🧠 Wellness</a>
+      <a href="gradguidestudy.html">👥 Study Groups</a>
+      <a href="gradguidesurvival.html">📖 Survival Guide</a>
+      <a href="gradguideloginpage.html" class="auth-link" id="authLinkMobile">🔑 Log In</a>
+      <a href="gradguidefood.html" class="nav-cta">🍽️ Order Food</a>
+    </div>
+  </nav>
+
+  <div class="page-header">
+    <span class="badge">Learn Together</span>
+    <h1>Find your <em>Study Group</em></h1>
+    <p>Select your faculty, department and level to find students studying the same courses as you.</p>
+    <div class="steps">
+      <div class="step active" id="step1"><span class="step-num">1</span> Faculty</div>
+      <span class="step-arrow">→</span>
+      <div class="step" id="step2"><span class="step-num">2</span> Department</div>
+      <span class="step-arrow">→</span>
+      <div class="step" id="step3"><span class="step-num">3</span> Level</div>
+      <span class="step-arrow">→</span>
+      <div class="step" id="step4"><span class="step-num">4</span> Groups</div>
+    </div>
+  </div>
+
+  <div class="main">
+
+    <!-- SCREEN 1: FACULTY -->
+    <div class="screen active" id="screen-faculty">
+      <p class="screen-title">Choose your Faculty</p>
+      <p class="screen-sub">Select the faculty you belong to</p>
+      <div class="faculty-grid">
+        <div class="faculty-card" onclick="selectFaculty('fpas')">
+          <div class="faculty-icon">🔬</div>
+          <h3>FPAS</h3>
+          <p>Faculty of Pure & Applied Science</p>
+        </div>
+        <div class="faculty-card" onclick="selectFaculty('fsms')">
+          <div class="faculty-icon">📊</div>
+          <h3>FSMS</h3>
+          <p>Faculty of Social & Management Science</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- SCREEN 2: DEPARTMENT -->
+    <div class="screen" id="screen-dept">
+      <button class="back-btn" onclick="goBack('faculty')">← Back</button>
+      <p class="screen-title">Choose your Department</p>
+      <p class="screen-sub">Select your department association</p>
+      <div class="dept-grid" id="deptGrid"></div>
+    </div>
+
+    <!-- SCREEN 3: LEVEL -->
+    <div class="screen" id="screen-level">
+      <button class="back-btn" onclick="goBack('dept')">← Back</button>
+      <p class="screen-title">Choose your Level</p>
+      <p class="screen-sub">Select your current level</p>
+      <div class="level-grid">
+        <div class="level-card" onclick="selectLevel(100)"><span class="lvl-num">100</span><span class="lvl-label">Level</span></div>
+        <div class="level-card" onclick="selectLevel(200)"><span class="lvl-num">200</span><span class="lvl-label">Level</span></div>
+        <div class="level-card" onclick="selectLevel(300)"><span class="lvl-num">300</span><span class="lvl-label">Level</span></div>
+        <div class="level-card" onclick="selectLevel(400)"><span class="lvl-num">400</span><span class="lvl-label">Level</span></div>
+      </div>
+    </div>
+
+    <!-- SCREEN 4: GROUPS -->
+    <div class="screen" id="screen-groups">
+      <button class="back-btn" onclick="goBack('level')">← Back</button>
+      <div class="groups-header">
+        <div>
+          <p class="screen-title">Study Groups</p>
+          <div class="groups-context" id="groupsContext"></div>
+        </div>
+        <button class="create-btn" id="openModal">+ Create Group</button>
+      </div>
+      <div class="groups-grid" id="groupsGrid"></div>
+    </div>
+
+  </div>
+
+  <!-- CREATE MODAL -->
+  <div class="modal-overlay" id="modalOverlay">
+    <div class="modal">
+      <h2>👥 Create a Study Group</h2>
+      <div class="form-group"><label>Your Full Name</label><input type="text" id="f-name" placeholder="e.g. Chukwuemeka Obi"/></div>
+      <div class="form-group"><label>Course / Topic</label><input type="text" id="f-course" placeholder="e.g. Data Structures & Algorithms"/></div>
+      <div class="form-group"><label>Meeting Date</label><input type="date" id="f-date"/></div>
+      <div class="form-group"><label>Meeting Time</label><input type="time" id="f-time"/></div>
+      <div class="form-group"><label>Location</label><input type="text" id="f-location" placeholder="e.g. CS Lab, Library Room 2"/></div>
+      <div class="form-group"><label>Max Members</label>
+        <select id="f-max"><option value="4">4 members</option><option value="6" selected>6 members</option><option value="8">8 members</option><option value="10">10 members</option></select>
+      </div>
+      <div class="form-group"><label>Description</label><textarea id="f-desc" placeholder="What will your group be studying? What's your goal?"></textarea></div>
+      <div class="modal-btns">
+        <button class="modal-cancel" id="closeModal">Cancel</button>
+        <button class="modal-submit" id="submitGroup">Create Group 🚀</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <footer><p>Built By Taiwo Emmanuel for students · <span>GradGuide</span> · PCU</p></footer>
+
+  <script>
+    // THEME
+    const html = document.documentElement;
+    const saved = localStorage.getItem('gradguide-theme');
+    if (saved) html.setAttribute('data-theme', saved);
+    document.getElementById('themeToggle').addEventListener('click', () => {
+      const next = html.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+      html.setAttribute('data-theme', next); localStorage.setItem('gradguide-theme', next);
+    });
+    const hamburger = document.getElementById('hamburger');
+    const mobileMenu = document.getElementById('mobileMenu');
+    hamburger.addEventListener('click', () => { hamburger.classList.toggle('open'); mobileMenu.classList.toggle('open'); });
+    mobileMenu.querySelectorAll('a').forEach(l => l.addEventListener('click', () => { hamburger.classList.remove('open'); mobileMenu.classList.remove('open'); }));
+
+    // DATA
+    const depts = {
+      fpas: [
+        { id:'nacos', name:'NACOS', full:'Nigeria Association of Computing Students', color:'#2D6A4F', initials:'NC' },
+        { id:'nassa', name:'NASSA', full:'Natural & Applied Science Students Association', color:'#4A90D9', initials:'NS' },
+      ],
+      fsms: [
+        { id:'irsapcu', name:'IRSAPCU', full:'International Relations Students Association PCU', color:'#E63946', initials:'IR' },
+        { id:'nabas', name:'NABAS', full:'Nigeria Association of Business Administration Students', color:'#F4A261', initials:'NB' },
+        { id:'amacos', name:'AMACOS', full:'Association of Mass Communication Students', color:'#9B59B6', initials:'AM' },
+      ]
+    };
+
+    const groupsData = {
+      nacos: {
+        100: [
+          { id:1, name:'Introduction to Programming Study Group', course:'Introduction to Programming', members:[{name:'Tolu Adeyemi', level:'100L', color:'#2D6A4F'},{name:'Emeka Obi', level:'100L', color:'#E63946'},{name:'Fatima Bello', level:'100L', color:'#4A90D9'}], max:6, meeting:{date:'Mon June 16', time:'3:00 PM', location:'CS Lab 1'}, desc:'Covering Python basics, logic and problem solving together. Perfect for beginners!', open:true },
+          { id:2, name:'Maths for Computing Group', course:'Mathematics for Computing', members:[{name:'David Eze', level:'100L', color:'#F4A261'},{name:'Amaka Nwosu', level:'100L', color:'#2D6A4F'}], max:8, meeting:{date:'Wed June 18', time:'2:00 PM', location:'Library Room A'}, desc:'Tackling sets, logic, number theory and all the maths needed for CS.', open:true },
+        ],
+        200: [
+          { id:3, name:'DSA Exam Prep Squad', course:'Data Structures & Algorithms', members:[{name:'Chidi Okonkwo', level:'200L', color:'#2D6A4F'},{name:'Ngozi Eze', level:'200L', color:'#9B59B6'},{name:'Seun Lawal', level:'200L', color:'#E63946'},{name:'Bola Adewale', level:'200L', color:'#4A90D9'}], max:6, meeting:{date:'Tue June 17', time:'4:00 PM', location:'CS Lab 2'}, desc:'Mastering sorting algorithms, trees, and graphs before exams. Past questions every session.', open:true },
+          { id:4, name:'Web Development Circle', course:'Web Technologies', members:[{name:'Uche Okafor', level:'200L', color:'#F4A261'},{name:'Chisom Eze', level:'200L', color:'#2D6A4F'},{name:'Kemi Afolabi', level:'200L', color:'#E63946'},{name:'Rotimi Bello', level:'200L', color:'#4A90D9'},{name:'Ifunanya Obi', level:'200L', color:'#9B59B6'},{name:'Tunde Alabi', level:'200L', color:'#F4A261'}], max:6, meeting:{date:'Fri June 19', time:'3:00 PM', location:'Library'}, desc:'Building real projects while learning HTML, CSS and JavaScript together.', open:false },
+        ],
+        300: [
+          { id:5, name:'Database Systems Group', course:'Database Management Systems', members:[{name:'Oluwaseun Ade', level:'300L', color:'#2D6A4F'},{name:'Precious Nwosu', level:'300L', color:'#4A90D9'},{name:'Emmanuel Obi', level:'300L', color:'#E63946'}], max:6, meeting:{date:'Thu June 18', time:'5:00 PM', location:'CS Lab 3'}, desc:'Deep diving into SQL, normalization, and database design. Real project practice included.', open:true },
+        ],
+        400: [
+          { id:6, name:'Final Year Project Support', course:'Final Year Project', members:[{name:'Adaeze Uchenna', level:'400L', color:'#2D6A4F'},{name:'Babatunde Olusola', level:'400L', color:'#F4A261'},{name:'Chidinma Eze', level:'400L', color:'#9B59B6'}], max:8, meeting:{date:'Sat June 20', time:'10:00 AM', location:'Online — WhatsApp'}, desc:'Supporting each other through final year projects. Chapter reviews, research tips, accountability.', open:true },
+        ]
+      },
+      nassa: {
+        100: [
+          { id:7, name:'General Science Foundations', course:'General Biology & Chemistry', members:[{name:'Adaora Nwosu', level:'100L', color:'#4A90D9'},{name:'Yusuf Musa', level:'100L', color:'#2D6A4F'}], max:6, meeting:{date:'Mon June 16', time:'2:00 PM', location:'Science Block Room 1'}, desc:'Building strong foundations in biology and chemistry for first year science students.', open:true },
+        ],
+        200: [
+          { id:8, name:'Organic Chemistry Study Group', course:'Organic Chemistry', members:[{name:'Blessing Eze', level:'200L', color:'#4A90D9'},{name:'Kayode Adeleke', level:'200L', color:'#E63946'},{name:'Nkechi Obi', level:'200L', color:'#9B59B6'}], max:6, meeting:{date:'Wed June 18', time:'1:00 PM', location:'Science Lab 2'}, desc:'Tackling organic reactions, mechanisms and functional groups together.', open:true },
+        ],
+        300: [{ id:9, name:'Biochemistry Deep Dive', course:'Biochemistry', members:[{name:'Tosin Adesanya', level:'300L', color:'#4A90D9'},{name:'Miracle Okafor', level:'300L', color:'#2D6A4F'}], max:6, meeting:{date:'Tue June 17', time:'3:00 PM', location:'Science Block'}, desc:'Covering enzymes, metabolism and molecular biology for 300 level exams.', open:true }],
+        400: [{ id:10, name:'Research Methods Group', course:'Research Methodology', members:[{name:'Chioma Nwosu', level:'400L', color:'#4A90D9'},{name:'Ibrahim Suleiman', level:'400L', color:'#F4A261'},{name:'Aisha Bello', level:'400L', color:'#9B59B6'}], max:6, meeting:{date:'Fri June 19', time:'11:00 AM', location:'Library'}, desc:'Helping each other with research design, data analysis and thesis writing.', open:true }],
+      },
+      irsapcu: {
+        100: [{ id:11, name:'World Politics Intro Group', course:'Introduction to International Relations', members:[{name:'Chukwudi Obi', level:'100L', color:'#E63946'},{name:'Halima Yusuf', level:'100L', color:'#4A90D9'}], max:6, meeting:{date:'Mon June 16', time:'2:00 PM', location:'Social Science Block'}, desc:'Learning the basics of international relations, diplomacy and global politics together.', open:true }],
+        200: [{ id:12, name:'Diplomacy & Foreign Policy', course:'Diplomacy & Foreign Policy', members:[{name:'Oluwafemi Adeyemi', level:'200L', color:'#E63946'},{name:'Grace Eze', level:'200L', color:'#4A90D9'},{name:'Abdul Musa', level:'200L', color:'#F4A261'}], max:6, meeting:{date:'Thu June 18', time:'3:00 PM', location:'Seminar Room'}, desc:'Analyzing diplomatic strategies and Nigerian foreign policy case studies.', open:true }],
+        300: [{ id:13, name:'International Law Study Circle', course:'International Law', members:[{name:'Funmilayo Ade', level:'300L', color:'#E63946'},{name:'Samuel Okafor', level:'300L', color:'#2D6A4F'}], max:6, meeting:{date:'Wed June 17', time:'4:00 PM', location:'Library'}, desc:'Breaking down treaties, conventions, and international legal frameworks.', open:true }],
+        400: [{ id:14, name:'Thesis Writing Support', course:'Final Year Thesis', members:[{name:'Maryam Bello', level:'400L', color:'#E63946'},{name:'Emeka Chukwu', level:'400L', color:'#4A90D9'},{name:'Sola Adewale', level:'400L', color:'#F4A261'}], max:8, meeting:{date:'Sat June 20', time:'9:00 AM', location:'Online'}, desc:'Peer review, research support and accountability for IR final year students.', open:true }],
+      },
+      nabas: {
+        100: [{ id:15, name:'Business Foundations Group', course:'Introduction to Business', members:[{name:'Temi Ogundimu', level:'100L', color:'#F4A261'},{name:'Peter Eze', level:'100L', color:'#2D6A4F'}], max:6, meeting:{date:'Tue June 16', time:'1:00 PM', location:'Management Block'}, desc:'Learning business concepts, entrepreneurship basics and management principles.', open:true }],
+        200: [{ id:16, name:'Accounting Study Group', course:'Financial Accounting', members:[{name:'Chioma Obi', level:'200L', color:'#F4A261'},{name:'Taiwo Alabi', level:'200L', color:'#E63946'},{name:'Ugo Nwosu', level:'200L', color:'#4A90D9'}], max:6, meeting:{date:'Mon June 16', time:'4:00 PM', location:'Library Room B'}, desc:'Practicing financial statements, ledger entries and balance sheets together.', open:true }],
+        300: [{ id:17, name:'Marketing Strategy Circle', course:'Marketing Management', members:[{name:'Adunola Adesanya', level:'300L', color:'#F4A261'},{name:'Ifeanyi Obi', level:'300L', color:'#2D6A4F'}], max:6, meeting:{date:'Thu June 18', time:'2:00 PM', location:'Seminar Room'}, desc:'Working through marketing case studies, brand strategies and consumer behavior.', open:true }],
+        400: [{ id:18, name:'Business Research Group', course:'Business Research Methods', members:[{name:'Kola Adekunle', level:'400L', color:'#F4A261'},{name:'Ngozi Nwosu', level:'400L', color:'#E63946'}], max:6, meeting:{date:'Fri June 19', time:'10:00 AM', location:'Online'}, desc:'Supporting final year BUS students with research, data and project writing.', open:true }],
+      },
+      amacos: {
+        100: [{ id:19, name:'Media Studies Beginners', course:'Introduction to Mass Communication', members:[{name:'Tunde Bello', level:'100L', color:'#9B59B6'},{name:'Adaeze Nwosu', level:'100L', color:'#E63946'}], max:6, meeting:{date:'Mon June 16', time:'3:00 PM', location:'FPAS Seminar Room'}, desc:'Learning the fundamentals of mass communication, media theory and journalism basics.', open:true }],
+        200: [{ id:20, name:'Broadcast & Journalism Group', course:'Broadcast Journalism', members:[{name:'Chiamaka Obi', level:'200L', color:'#9B59B6'},{name:'Rasheed Musa', level:'200L', color:'#4A90D9'},{name:'Simi Adeleke', level:'200L', color:'#F4A261'}], max:6, meeting:{date:'Wed June 18', time:'2:00 PM', location:'Media Lab'}, desc:'Practicing news writing, broadcast scripts and media production techniques.', open:true }],
+        300: [{ id:21, name:'Public Relations Study Circle', course:'Public Relations', members:[{name:'Funke Oladele', level:'300L', color:'#9B59B6'},{name:'Chidi Eze', level:'300L', color:'#2D6A4F'}], max:6, meeting:{date:'Fri June 19', time:'1:00 PM', location:'Library'}, desc:'Working through PR campaigns, crisis communication and stakeholder management.', open:true }],
+        400: [{ id:22, name:'Final Year Media Project', course:'Final Year Media Project', members:[{name:'Blessing Eze', level:'400L', color:'#9B59B6'},{name:'Emeka Alabi', level:'400L', color:'#E63946'},{name:'Tobi Ogun', level:'400L', color:'#F4A261'}], max:8, meeting:{date:'Sat June 20', time:'11:00 AM', location:'Online'}, desc:'Collaboration and peer feedback for final year mass communication students.', open:true }],
+      }
+    };
+
+    let state = { faculty: null, dept: null, level: null };
+    const joinedGroups = new Set();
+
+    function setStep(active) {
+      ['step1','step2','step3','step4'].forEach((s,i) => {
+        const el = document.getElementById(s);
+        const stepNum = i + 1;
+        const activeNum = {faculty:1,dept:2,level:3,groups:4}[active];
+        el.className = 'step' + (stepNum < activeNum ? ' done' : stepNum === activeNum ? ' active' : '');
+      });
+    }
+
+    function showScreen(name) {
+      document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+      document.getElementById('screen-' + name).classList.add('active');
+      setStep(name);
+    }
+
+    function selectFaculty(f) {
+      state.faculty = f;
+      const grid = document.getElementById('deptGrid');
+      grid.innerHTML = depts[f].map(d => `
+        <div class="dept-card" onclick="selectDept('${d.id}')">
+          <div class="dept-logo" style="background:${d.color}">${d.initials}</div>
+          <div class="dept-info"><h3>${d.name}</h3><p>${d.full}</p></div>
+        </div>
+      `).join('');
+      showScreen('dept');
+    }
+
+    function selectDept(d) {
+      state.dept = d;
+      showScreen('level');
+    }
+
+    function selectLevel(l) {
+      state.level = l;
+      renderGroups();
+      showScreen('groups');
+    }
+
+    function goBack(to) {
+      showScreen(to);
+    }
+
+    function renderGroups() {
+      const dept = depts[state.faculty].find(d => d.id === state.dept);
+      const grid = document.getElementById('groupsGrid');
+      const ctx = document.getElementById('groupsContext');
+      ctx.innerHTML = `<span class="ctx-pill">${state.faculty.toUpperCase()}</span><span class="ctx-pill">${dept.name}</span><span class="ctx-pill">${state.level} Level</span>`;
+
+      const groups = (groupsData[state.dept] || {})[state.level] || [];
+      if (groups.length === 0) {
+        grid.innerHTML = `<div style="grid-column:1/-1;text-align:center;padding:3rem 1rem;color:var(--muted)"><div style="font-size:2.5rem;margin-bottom:0.8rem">👥</div><p>No study groups yet for ${dept.name} ${state.level} Level.<br>Be the first to create one!</p></div>`;
+        return;
+      }
+      grid.innerHTML = groups.map(g => `
+        <div class="group-card">
+          <div class="group-top">
+            <span class="group-dept-badge" style="background:${depts[state.faculty].find(d=>d.id===state.dept).color}">${dept.name}</span>
+            <span class="group-status ${g.open && !joinedGroups.has(g.id) || joinedGroups.has(g.id) ? 'status-open' : 'status-full'}">${joinedGroups.has(g.id) ? '✅ Joined' : g.open ? 'Open' : 'Full'}</span>
+          </div>
+          <h3>${g.name}</h3>
+          <div class="course">📚 ${g.course}</div>
+          <p>${g.desc}</p>
+          <div class="members-list">
+            ${g.members.map(m => `
+              <div class="member-row">
+                <div class="member-avatar" style="background:${m.color}">${m.name.split(' ').map(n=>n[0]).join('')}</div>
+                <div class="member-info"><div class="member-name">${m.name}</div><div class="member-detail">${m.level} · ${dept.name}</div></div>
+              </div>
+            `).join('')}
+          </div>
+          <div class="group-meeting">📅 <strong>${g.meeting.date}</strong> · 🕐 ${g.meeting.time} · 📍 ${g.meeting.location}</div>
+          <div class="group-footer">
+            <span class="member-count">👤 ${g.members.length}/${g.max} members</span>
+            <button class="join-btn ${joinedGroups.has(g.id) ? 'joined' : ''}" 
+              ${!g.open && !joinedGroups.has(g.id) ? 'disabled' : ''}
+              onclick="toggleJoin(${g.id})">
+              ${joinedGroups.has(g.id) ? 'Leave Group' : g.open ? 'Join Group' : 'Full'}
+            </button>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function toggleJoin(id) {
+      if (joinedGroups.has(id)) { joinedGroups.delete(id); showToast('👋 You left the group.'); }
+      else { joinedGroups.add(id); showToast('✅ You joined the group!'); }
+      renderGroups();
+    }
+
+    // CREATE GROUP
+    document.getElementById('openModal').addEventListener('click', () => document.getElementById('modalOverlay').classList.add('open'));
+    document.getElementById('closeModal').addEventListener('click', () => document.getElementById('modalOverlay').classList.remove('open'));
+    document.getElementById('submitGroup').addEventListener('click', () => {
+      const name = document.getElementById('f-name').value.trim();
+      const course = document.getElementById('f-course').value.trim();
+      const date = document.getElementById('f-date').value;
+      const time = document.getElementById('f-time').value;
+      const location = document.getElementById('f-location').value.trim();
+      const max = parseInt(document.getElementById('f-max').value);
+      const desc = document.getElementById('f-desc').value.trim();
+      if (!name || !course || !date || !time || !location || !desc) { alert('Please fill in all fields!'); return; }
+      const dept = depts[state.faculty].find(d => d.id === state.dept);
+      const colors = ['#2D6A4F','#E63946','#4A90D9','#F4A261','#9B59B6'];
+      const newGroup = { id: Date.now(), name: course + ' Study Group', course, members:[{name, level: state.level+'L', color: colors[Math.floor(Math.random()*colors.length)]}], max, meeting:{ date: new Date(date).toDateString().slice(0,10), time, location }, desc, open: true };
+      if (!groupsData[state.dept]) groupsData[state.dept] = {};
+      if (!groupsData[state.dept][state.level]) groupsData[state.dept][state.level] = [];
+      groupsData[state.dept][state.level].unshift(newGroup);
+      document.getElementById('modalOverlay').classList.remove('open');
+      renderGroups();
+      showToast('🎉 Study group created!');
+      ['f-name','f-course','f-location','f-desc'].forEach(id => document.getElementById(id).value = '');
+    });
+
+    function showToast(msg) {
+      const t = document.getElementById('toast');
+      t.textContent = msg; t.classList.add('show');
+      setTimeout(() => t.classList.remove('show'), 3000);
+    }
+  </script>
+  <!-- AUTH NAV FLIP: show "Log out" when signed in -->
+  <script>
+    (async () => {
+      try {
+        const { data } = await db.auth.getSession();
+        if (data.session) {
+          document.querySelectorAll('.auth-link').forEach(el => {
+            el.textContent = el.id === 'authLinkMobile' ? '🔑 Log out' : 'Log out';
+            el.href = '#';
+            el.addEventListener('click', (e) => { e.preventDefault(); gradguideLogout(); });
+          });
+        }
+      } catch (err) {
+        console.error('Auth nav check failed:', err);
+      }
+    })();
+  </script>
+</body>
+</html>

@@ -1,0 +1,549 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>GradGuide — Order Food</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="gradguide-auth.js"></script>
+  <script>gradguideRequireLogin();</script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Playfair+Display:ital,wght@0,700;1,700&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    [data-theme="light"] {
+      --bg: #F0F4F0; --card: #ffffff; --text: #1A1A2E; --muted: #556B5A;
+      --border: rgba(45,106,79,0.15); --green: #2D6A4F; --lime: #52B788;
+      --soft: #D8EDDF; --red: #E63946; --yellow: #F4A261;
+      --nav-bg: rgba(240,244,240,0.55); --nav-border: rgba(255,255,255,0.6);
+      --nav-shadow: rgba(45,106,79,0.12); --feat-bg: #1A1A2E; --feat-text: #ffffff;
+    }
+
+    [data-theme="dark"] {
+      --bg: #0F1A14; --card: #1C2B1F; --text: #E8F5EE; --muted: #8FBFA0;
+      --border: rgba(82,183,136,0.2); --green: #52B788; --lime: #74C69D;
+      --soft: #1C2B1F; --red: #FF6B6B; --yellow: #FFB347;
+      --nav-bg: rgba(15,26,20,0.55); --nav-border: rgba(82,183,136,0.25);
+      --nav-shadow: rgba(0,0,0,0.4); --feat-bg: #0A1209; --feat-text: #E8F5EE;
+    }
+
+    body { font-family: 'Outfit', sans-serif; background: var(--bg); color: var(--text); transition: background 0.35s, color 0.35s; }
+
+    /* NAV */
+    nav {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 0.9rem 2.5rem;
+      background: var(--nav-bg);
+      backdrop-filter: blur(22px) saturate(180%);
+      -webkit-backdrop-filter: blur(22px) saturate(180%);
+      border-bottom: 1px solid var(--nav-border);
+      box-shadow: 0 4px 32px var(--nav-shadow), inset 0 1px 0 rgba(255,255,255,0.3);
+      position: sticky; top: 0; z-index: 100;
+      border-radius: 0 0 18px 18px;
+    }
+    .logo { font-family: 'Playfair Display', serif; font-size: 1.7rem; font-weight: 700; font-style: italic; color: var(--green); text-decoration: none; }
+    .logo span { font-style: normal; color: var(--lime); }
+    nav ul { list-style: none; display: flex; align-items: center; gap: 0.3rem; }
+    nav ul li a { text-decoration: none; color: var(--text); font-weight: 500; font-size: 0.9rem; padding: 0.45rem 0.9rem; border-radius: 50px; transition: background 0.2s, color 0.2s; }
+    nav ul li a:hover { background: rgba(82,183,136,0.15); color: var(--green); }
+    .nav-cta { background: var(--green) !important; color: #fff !important; padding: 0.5rem 1.1rem !important; border-radius: 50px !important; font-weight: 600 !important; }
+    .nav-right { display: flex; align-items: center; gap: 1rem; }
+    .theme-toggle { background: var(--soft); border: 1.5px solid var(--border); border-radius: 50px; width: 52px; height: 28px; cursor: pointer; position: relative; transition: background 0.3s; flex-shrink: 0; }
+    .theme-toggle::after { content: ''; position: absolute; top: 3px; left: 3px; width: 20px; height: 20px; border-radius: 50%; background: var(--green); transition: transform 0.3s, background 0.3s; box-shadow: 0 2px 6px rgba(0,0,0,0.2); }
+    [data-theme="dark"] .theme-toggle::after { transform: translateX(24px); background: var(--lime); }
+    .toggle-icon { position: absolute; top: 50%; transform: translateY(-50%); font-size: 0.65rem; pointer-events: none; }
+    .toggle-icon.sun { left: 6px; } .toggle-icon.moon { right: 6px; }
+    .hamburger { display: none; flex-direction: column; gap: 5px; cursor: pointer; background: none; border: none; padding: 4px; }
+    .hamburger span { display: block; width: 24px; height: 2.5px; background: var(--text); border-radius: 4px; transition: all 0.3s; }
+    .hamburger.open span:nth-child(1) { transform: translateY(7.5px) rotate(45deg); }
+    .hamburger.open span:nth-child(2) { opacity: 0; }
+    .hamburger.open span:nth-child(3) { transform: translateY(-7.5px) rotate(-45deg); }
+    .mobile-menu { display: none; flex-direction: column; gap: 0.3rem; position: absolute; top: calc(100% + 8px); left: 1rem; right: 1rem; background: var(--nav-bg); backdrop-filter: blur(22px) saturate(180%); border: 1px solid var(--nav-border); border-radius: 16px; padding: 1rem; box-shadow: 0 8px 32px var(--nav-shadow); z-index: 99; }
+    .mobile-menu.open { display: flex; }
+    .mobile-menu a { text-decoration: none; color: var(--text); font-weight: 500; font-size: 1rem; padding: 0.7rem 1rem; border-radius: 10px; transition: background 0.2s; }
+    .mobile-menu a:hover { background: rgba(82,183,136,0.15); color: var(--green); }
+    .mobile-menu .nav-cta { background: var(--green) !important; color: #fff !important; text-align: center; margin-top: 0.3rem; }
+    @media (max-width: 640px) { nav ul { display: none; } .hamburger { display: flex; } }
+
+    /* PAGE HEADER */
+    .page-header {
+      background: linear-gradient(150deg, var(--soft) 0%, var(--bg) 70%);
+      padding: 3.5rem 2.5rem 2.5rem;
+      text-align: center;
+    }
+    .page-header .badge { background: var(--lime); color: var(--bg); font-size: 0.78rem; font-weight: 700; padding: 0.35rem 1.1rem; border-radius: 50px; letter-spacing: 0.08em; text-transform: uppercase; display: inline-block; margin-bottom: 1rem; }
+    .page-header h1 { font-family: 'Playfair Display', serif; font-size: clamp(2rem, 5vw, 3.2rem); font-weight: 700; margin-bottom: 0.6rem; }
+    .page-header h1 em { font-style: italic; color: var(--green); }
+    .page-header p { color: var(--muted); font-size: 1rem; max-width: 480px; margin: 0 auto; line-height: 1.7; }
+
+    /* LAYOUT */
+    .food-layout {
+      display: grid;
+      grid-template-columns: 1fr 360px;
+      gap: 2rem;
+      max-width: 1100px;
+      margin: 2.5rem auto;
+      padding: 0 2rem 4rem;
+    }
+
+    @media (max-width: 860px) {
+      .food-layout { grid-template-columns: 1fr; padding: 0 1.2rem 3rem; }
+    }
+
+    /* CATEGORY TABS */
+    .category-tabs {
+      display: flex;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+      margin-bottom: 1.5rem;
+    }
+
+    .tab-btn {
+      background: var(--card);
+      border: 1.5px solid var(--border);
+      color: var(--text);
+      font-family: 'Outfit', sans-serif;
+      font-size: 0.88rem;
+      font-weight: 600;
+      padding: 0.45rem 1.1rem;
+      border-radius: 50px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .tab-btn:hover { border-color: var(--green); color: var(--green); }
+    .tab-btn.active { background: var(--green); color: #fff; border-color: var(--green); }
+
+    /* MENU GRID */
+    .menu-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 1.2rem;
+    }
+
+    .menu-item {
+      background: var(--card);
+      border-radius: 16px;
+      overflow: hidden;
+      border: 1.5px solid var(--border);
+      transition: transform 0.2s, box-shadow 0.2s;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .menu-item:hover { transform: translateY(-3px); box-shadow: 0 8px 24px var(--nav-shadow); }
+
+    .menu-img {
+      width: 100%;
+      height: 145px;
+      object-fit: cover;
+      display: block;
+      background: var(--soft);
+    }
+
+    .menu-info { padding: 1rem; flex: 1; display: flex; flex-direction: column; }
+    .menu-info h3 { font-size: 0.95rem; font-weight: 700; margin-bottom: 0.3rem; }
+    .menu-info p { font-size: 0.8rem; color: var(--muted); line-height: 1.5; flex: 1; margin-bottom: 0.8rem; }
+
+    .menu-bottom { display: flex; justify-content: space-between; align-items: center; }
+    .price { font-size: 1rem; font-weight: 800; color: var(--green); }
+
+    .add-btn {
+      background: var(--green);
+      color: #fff;
+      border: none;
+      width: 32px; height: 32px;
+      border-radius: 50%;
+      font-size: 1.3rem;
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      transition: opacity 0.2s, transform 0.2s;
+      font-family: 'Outfit', sans-serif;
+    }
+
+    .add-btn:hover { opacity: 0.85; transform: scale(1.1); }
+
+    /* CART */
+    .cart-panel {
+      background: var(--card);
+      border-radius: 20px;
+      border: 1.5px solid var(--border);
+      padding: 1.5rem;
+      position: sticky;
+      top: 90px;
+      height: fit-content;
+      box-shadow: 0 4px 24px var(--nav-shadow);
+    }
+
+    .cart-panel h2 { font-family: 'Playfair Display', serif; font-size: 1.3rem; font-weight: 700; margin-bottom: 1.2rem; display: flex; align-items: center; gap: 0.5rem; }
+
+    .cart-empty { text-align: center; color: var(--muted); font-size: 0.9rem; padding: 2rem 0; }
+    .cart-empty .empty-icon { font-size: 2.5rem; margin-bottom: 0.5rem; }
+
+    .cart-items { display: flex; flex-direction: column; gap: 0.8rem; margin-bottom: 1.2rem; }
+
+    .cart-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: var(--bg);
+      border-radius: 10px;
+      padding: 0.7rem 0.9rem;
+      font-size: 0.88rem;
+    }
+
+    .cart-item-name { font-weight: 600; flex: 1; }
+    .cart-item-qty { display: flex; align-items: center; gap: 0.5rem; margin: 0 0.8rem; }
+    .qty-btn { background: var(--soft); border: none; width: 24px; height: 24px; border-radius: 50%; cursor: pointer; font-size: 1rem; display: flex; align-items: center; justify-content: center; color: var(--green); font-weight: 700; transition: background 0.2s; }
+    .qty-btn:hover { background: var(--lime); color: #fff; }
+    .qty-num { font-weight: 700; min-width: 16px; text-align: center; }
+    .cart-item-price { font-weight: 700; color: var(--green); }
+
+    .cart-divider { border: none; border-top: 1.5px solid var(--border); margin: 0.5rem 0; }
+
+    .cart-total { display: flex; justify-content: space-between; font-weight: 800; font-size: 1.05rem; margin-bottom: 1.2rem; }
+    .cart-total span:last-child { color: var(--green); }
+
+    .order-btn {
+      width: 100%;
+      background: var(--green);
+      color: #fff;
+      border: none;
+      padding: 0.9rem;
+      border-radius: 12px;
+      font-family: 'Outfit', sans-serif;
+      font-size: 1rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: opacity 0.2s, transform 0.2s;
+    }
+
+    .order-btn:hover { opacity: 0.88; transform: translateY(-1px); }
+    .order-btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+
+    /* ORDER CONFIRMATION MODAL */
+    .modal-overlay {
+      display: none;
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,0.55);
+      backdrop-filter: blur(4px);
+      z-index: 200;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .modal-overlay.open { display: flex; }
+
+    .modal {
+      background: var(--card);
+      border-radius: 24px;
+      padding: 2.5rem 2rem;
+      max-width: 380px;
+      width: 90%;
+      text-align: center;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+      animation: popIn 0.35s cubic-bezier(0.34,1.56,0.64,1);
+    }
+
+    @keyframes popIn { from { transform: scale(0.7); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+
+    .modal-icon { font-size: 3.5rem; margin-bottom: 0.8rem; }
+
+    .modal h2 { font-family: 'Playfair Display', serif; font-size: 1.6rem; font-weight: 700; margin-bottom: 0.5rem; }
+    .modal p { color: var(--muted); font-size: 0.95rem; line-height: 1.6; margin-bottom: 1.5rem; }
+
+    .order-id-box {
+      background: var(--soft);
+      border: 2px dashed var(--green);
+      border-radius: 14px;
+      padding: 1.2rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .order-id-label { font-size: 0.78rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); margin-bottom: 0.4rem; }
+    .order-id-number { font-family: 'Playfair Display', serif; font-size: 2.2rem; font-weight: 700; color: var(--green); letter-spacing: 0.05em; }
+    .order-id-sub { font-size: 0.8rem; color: var(--muted); margin-top: 0.3rem; }
+
+    .pickup-time {
+      background: var(--bg);
+      border-radius: 10px;
+      padding: 0.8rem 1rem;
+      font-size: 0.9rem;
+      font-weight: 600;
+      margin-bottom: 1.5rem;
+      color: var(--yellow);
+    }
+
+    .close-modal-btn {
+      background: var(--green);
+      color: #fff;
+      border: none;
+      padding: 0.85rem 2rem;
+      border-radius: 50px;
+      font-family: 'Outfit', sans-serif;
+      font-size: 1rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: opacity 0.2s;
+    }
+
+    .close-modal-btn:hover { opacity: 0.88; }
+
+    /* FOOTER */
+    footer { background: var(--feat-bg); color: #556B5A; text-align: center; padding: 2rem; font-size: 0.88rem; }
+    footer span { color: var(--lime); }
+  </style>
+</head>
+<body>
+
+  <!-- NAV -->
+  <nav>
+    <a href="gradguide.html" class="logo"><em>Grad</em><span>Guide</span></a>
+    <ul>
+      <li><a href="gradguide.html">🏠 Home</a></li>
+      <li><a href="gradguideevents.html">Events</a></li>
+      <li><a href="gradguidewellness.html">Wellness</a></li>
+      <li><a href="gradguidestudy.html">Study Groups</a></li>
+      <li><a href="gradguidesurvival.html">Survival Guide</a></li>
+      <li><a href="gradguideloginpage.html" class="auth-link" id="authLink">Log In</a></li>
+      <li><a href="gradguidefood.html" class="nav-cta">🍽️ Order Food</a></li>
+    </ul>
+    <div class="nav-right">
+      <button class="theme-toggle" id="themeToggle" aria-label="Toggle dark mode">
+        <span class="toggle-icon sun">☀️</span>
+        <span class="toggle-icon moon">🌙</span>
+      </button>
+      <button class="hamburger" id="hamburger" aria-label="Open menu">
+        <span></span><span></span><span></span>
+      </button>
+    </div>
+    <div class="mobile-menu" id="mobileMenu">
+      <a href="gradguide.html">🏠 Home</a>
+      <a href="gradguideevents.html">🗓️ Events</a>
+      <a href="gradguidewellness.html">🧠 Wellness</a>
+      <a href="gradguidestudy.html">👥 Study Groups</a>
+      <a href="gradguidesurvival.html">📖 Survival Guide</a>
+      <a href="gradguideloginpage.html" class="auth-link" id="authLinkMobile">🔑 Log In</a>
+      <a href="gradguidefood.html" class="nav-cta">🍽️ Order Food</a>
+    </div>
+  </nav>
+
+  <!-- PAGE HEADER -->
+  <div class="page-header">
+    <span class="badge">Skip the Queue</span>
+    <h1>Order your <em>meal ahead</em></h1>
+    <p>Pick what you want, place your order, and show your unique ID at the counter. No waiting, no stress.</p>
+  </div>
+
+  <!-- MAIN LAYOUT -->
+  <div class="food-layout">
+
+    <!-- LEFT: MENU -->
+    <div>
+      <!-- Category Tabs -->
+      <div class="category-tabs" id="categoryTabs">
+        <button class="tab-btn active" data-cat="all">🍽️ All</button>
+        <button class="tab-btn" data-cat="breakfast">🌅 Breakfast</button>
+        <button class="tab-btn" data-cat="lunch">☀️ Lunch</button>
+        <button class="tab-btn" data-cat="snacks">🍿 Snacks</button>
+        <button class="tab-btn" data-cat="drinks">🥤 Drinks</button>
+      </div>
+
+      <!-- Menu Grid -->
+      <div class="menu-grid" id="menuGrid"></div>
+    </div>
+
+    <!-- RIGHT: CART -->
+    <div class="cart-panel">
+      <h2>🛒 Your Order <span id="cartCount" style="font-size:0.85rem;color:var(--muted);font-family:'Outfit',sans-serif;font-weight:500;"></span></h2>
+      <div id="cartContent">
+        <div class="cart-empty">
+          <div class="empty-icon">🛒</div>
+          <p>Your cart is empty.<br>Add something from the menu!</p>
+        </div>
+      </div>
+      <button class="order-btn" id="orderBtn" disabled>Place Order</button>
+    </div>
+
+  </div>
+
+  <!-- ORDER CONFIRMATION MODAL -->
+  <div class="modal-overlay" id="modalOverlay">
+    <div class="modal">
+      <div class="modal-icon">🎉</div>
+      <h2>Order Placed!</h2>
+      <p>Head to the cafeteria counter and show your pickup ID. Your food will be ready!</p>
+      <div class="order-id-box">
+        <div class="order-id-label">Your Pickup ID</div>
+        <div class="order-id-number" id="orderIdDisplay">GG-0000</div>
+        <div class="order-id-sub">Show this at the counter</div>
+      </div>
+      <div class="pickup-time" id="pickupTime">⏱️ Ready in about 10 minutes</div>
+      <button class="close-modal-btn" id="closeModal">Got it, thanks!</button>
+    </div>
+  </div>
+
+  <footer>
+    <p>Built with ❤️ for students · <span>GradGuide</span> · Your Campus Companion</p>
+  </footer>
+
+  <script>
+    // ── THEME ──
+    const themeToggle = document.getElementById('themeToggle');
+    const html = document.documentElement;
+    const saved = localStorage.getItem('gradguide-theme');
+    if (saved) html.setAttribute('data-theme', saved);
+    themeToggle.addEventListener('click', () => {
+      const next = html.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+      html.setAttribute('data-theme', next);
+      localStorage.setItem('gradguide-theme', next);
+    });
+
+    // ── HAMBURGER ──
+    const hamburger = document.getElementById('hamburger');
+    const mobileMenu = document.getElementById('mobileMenu');
+    hamburger.addEventListener('click', () => {
+      hamburger.classList.toggle('open');
+      mobileMenu.classList.toggle('open');
+    });
+    mobileMenu.querySelectorAll('a').forEach(l => l.addEventListener('click', () => {
+      hamburger.classList.remove('open'); mobileMenu.classList.remove('open');
+    }));
+
+    // ── MENU DATA ──
+    const menuItems = [
+      { id:1, name:'Semo & Egusi', desc:'Classic Nigerian semo served with rich egusi soup', price:1200, img:'semo.jpg', cat:'lunch' },
+      { id:2, name:'Jollof Rice & Chicken', desc:'Classic Nigerian jollof rice with grilled chicken and plantain', price:1400, img:'jollofrice.jpg', cat:'lunch' },
+      { id:3, name:'Puff Puff', desc:'Soft & fluffy deep-fried dough balls', price:300, img:'puffpuff.jpg', cat:'snacks' },
+      { id:4, name:'Akara & Bread', desc:'Bean fritters served in soft bread', price:600, img:'akara.jpg', cat:'breakfast' },
+      { id:5, name:'Bread & Egg', desc:'Toasted bread with scrambled eggs', price:500, img:'https://images.unsplash.com/photo-1525351484163-7529414344d8?w=400&q=80', cat:'breakfast' },
+      { id:6, name:'Jollof Spaghetti', desc:'Spicy tomato spaghetti Nigerian style', price:900, img:'spaghetti.jpg', cat:'lunch' },
+      { id:7, name:'Zobo Drink', desc:'Chilled hibiscus flower drink', price:250, img:'zobo.jpg', cat:'drinks' },
+      { id:8, name:'Bottled Water', desc:'500ml chilled water', price:150, img:'water.jpg', cat:'drinks' },
+      { id:9, name:'Chin Chin', desc:'Crunchy fried snack, lightly sweetened', price:200, img:'chinchin.jpg', cat:'snacks' },
+      { id:10, name:'Moi Moi', desc:'Steamed bean pudding, rich and filling', price:400, img:'moimoi.jpg', cat:'lunch' },
+    ];
+
+    let cart = {};
+    let currentCat = 'all';
+
+    // ── RENDER MENU ──
+    function renderMenu() {
+      const grid = document.getElementById('menuGrid');
+      const filtered = currentCat === 'all' ? menuItems : menuItems.filter(i => i.cat === currentCat);
+      grid.innerHTML = filtered.map(item => `
+        <div class="menu-item">
+          <img class="menu-img" src="${item.img}" alt="${item.name}" loading="lazy" onerror="this.style.background='var(--soft)';this.style.minHeight='145px'"/>
+          <div class="menu-info">
+            <h3>${item.name}</h3>
+            <p>${item.desc}</p>
+            <div class="menu-bottom">
+              <span class="price">₦${item.price.toLocaleString()}</span>
+              <button class="add-btn" onclick="addToCart(${item.id})">+</button>
+            </div>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    // ── CART LOGIC ──
+    function addToCart(id) {
+      cart[id] = (cart[id] || 0) + 1;
+      renderCart();
+    }
+
+    function updateQty(id, delta) {
+      cart[id] = (cart[id] || 0) + delta;
+      if (cart[id] <= 0) delete cart[id];
+      renderCart();
+    }
+
+    function renderCart() {
+      const content = document.getElementById('cartContent');
+      const orderBtn = document.getElementById('orderBtn');
+      const cartCount = document.getElementById('cartCount');
+      const ids = Object.keys(cart);
+
+      if (ids.length === 0) {
+        content.innerHTML = `<div class="cart-empty"><div class="empty-icon">🛒</div><p>Your cart is empty.<br>Add something from the menu!</p></div>`;
+        orderBtn.disabled = true;
+        cartCount.textContent = '';
+        return;
+      }
+
+      let total = 0;
+      let totalItems = 0;
+      const itemsHTML = ids.map(id => {
+        const item = menuItems.find(m => m.id == id);
+        const subtotal = item.price * cart[id];
+        total += subtotal;
+        totalItems += cart[id];
+        return `
+          <div class="cart-item">
+            <span class="cart-item-name">${item.name}</span>
+            <div class="cart-item-qty">
+              <button class="qty-btn" onclick="updateQty(${id}, -1)">−</button>
+              <span class="qty-num">${cart[id]}</span>
+              <button class="qty-btn" onclick="updateQty(${id}, 1)">+</button>
+            </div>
+            <span class="cart-item-price">₦${subtotal.toLocaleString()}</span>
+          </div>
+        `;
+      }).join('');
+
+      content.innerHTML = `
+        <div class="cart-items">${itemsHTML}</div>
+        <hr class="cart-divider">
+        <div class="cart-total"><span>Total</span><span>₦${total.toLocaleString()}</span></div>
+      `;
+
+      orderBtn.disabled = false;
+      cartCount.textContent = `(${totalItems} item${totalItems > 1 ? 's' : ''})`;
+    }
+
+    // ── PLACE ORDER ──
+    document.getElementById('orderBtn').addEventListener('click', () => {
+      const id = 'GG-' + Math.floor(1000 + Math.random() * 9000);
+      const mins = Math.floor(8 + Math.random() * 7);
+      document.getElementById('orderIdDisplay').textContent = id;
+      document.getElementById('pickupTime').textContent = `⏱️ Ready in about ${mins} minutes`;
+      document.getElementById('modalOverlay').classList.add('open');
+      cart = {};
+      renderCart();
+    });
+
+    document.getElementById('closeModal').addEventListener('click', () => {
+      document.getElementById('modalOverlay').classList.remove('open');
+    });
+
+    // ── TABS ──
+    document.getElementById('categoryTabs').addEventListener('click', e => {
+      if (!e.target.matches('.tab-btn')) return;
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      e.target.classList.add('active');
+      currentCat = e.target.dataset.cat;
+      renderMenu();
+    });
+
+    renderMenu();
+  </script>
+  <!-- AUTH NAV FLIP: show "Log out" when signed in -->
+  <script>
+    (async () => {
+      try {
+        const { data } = await db.auth.getSession();
+        if (data.session) {
+          document.querySelectorAll('.auth-link').forEach(el => {
+            el.textContent = el.id === 'authLinkMobile' ? '🔑 Log out' : 'Log out';
+            el.href = '#';
+            el.addEventListener('click', (e) => { e.preventDefault(); gradguideLogout(); });
+          });
+        }
+      } catch (err) {
+        console.error('Auth nav check failed:', err);
+      }
+    })();
+  </script>
+</body>
+</html>

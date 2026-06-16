@@ -1,0 +1,600 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>GradGuide — Log In</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Playfair+Display:ital,wght@0,700;1,700&display=swap" rel="stylesheet">
+
+  <!-- Supabase library: gives the page a global `supabase` object with createClient() -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    /* ── LIGHT THEME ── (identical tokens to homepage) */
+    [data-theme="light"] {
+      --bg:        #F0F4F0;
+      --bg2:       #E4EDE6;
+      --card:      #ffffff;
+      --text:      #1A1A2E;
+      --muted:     #556B5A;
+      --border:    rgba(45,106,79,0.15);
+      --green:     #2D6A4F;
+      --lime:      #52B788;
+      --soft:      #D8EDDF;
+      --red:       #E63946;
+      --yellow:    #F4A261;
+      --white:     #ffffff;
+      --nav-bg:    rgba(240,244,240,0.55);
+      --nav-border:rgba(255,255,255,0.6);
+      --nav-shadow:rgba(45,106,79,0.12);
+      --hero-grad: linear-gradient(150deg, #D8EDDF 0%, #F0F4F0 60%);
+      --feat-bg:   #1A1A2E;
+      --feat-text: #ffffff;
+      --field-bg:  #F4F8F5;
+    }
+
+    /* ── DARK THEME ── */
+    [data-theme="dark"] {
+      --bg:        #0F1A14;
+      --bg2:       #162010;
+      --card:      #1C2B1F;
+      --text:      #E8F5EE;
+      --muted:     #8FBFA0;
+      --border:    rgba(82,183,136,0.2);
+      --green:     #52B788;
+      --lime:      #74C69D;
+      --soft:      #1C2B1F;
+      --red:       #FF6B6B;
+      --yellow:    #FFB347;
+      --white:     #E8F5EE;
+      --nav-bg:    rgba(15,26,20,0.55);
+      --nav-border:rgba(82,183,136,0.25);
+      --nav-shadow:rgba(0,0,0,0.4);
+      --hero-grad: linear-gradient(150deg, #162010 0%, #0F1A14 60%);
+      --feat-bg:   #0A1209;
+      --feat-text: #E8F5EE;
+      --field-bg:  #16221A;
+    }
+
+    body {
+      font-family: 'Outfit', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      transition: background 0.35s, color 0.35s;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ── LIQUID GLASS NAV (matches homepage) ── */
+    nav {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0.9rem 2.5rem;
+      background: var(--nav-bg);
+      backdrop-filter: blur(22px) saturate(180%);
+      -webkit-backdrop-filter: blur(22px) saturate(180%);
+      border-bottom: 1px solid var(--nav-border);
+      box-shadow: 0 4px 32px var(--nav-shadow), inset 0 1px 0 rgba(255,255,255,0.3);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      border-radius: 0 0 18px 18px;
+    }
+
+    .logo {
+      font-family: 'Playfair Display', serif;
+      font-size: 1.7rem;
+      font-weight: 700;
+      font-style: italic;
+      color: var(--green);
+      text-decoration: none;
+      letter-spacing: -0.02em;
+    }
+    .logo span { font-style: normal; color: var(--lime); }
+
+    nav ul { list-style: none; display: flex; align-items: center; gap: 0.3rem; }
+
+    nav ul li a {
+      text-decoration: none;
+      color: var(--text);
+      font-weight: 500;
+      font-size: 0.9rem;
+      padding: 0.45rem 0.9rem;
+      border-radius: 50px;
+      transition: background 0.2s, color 0.2s;
+      letter-spacing: 0.01em;
+    }
+    nav ul li a:hover { background: rgba(82,183,136,0.15); color: var(--green); }
+
+    .nav-cta {
+      background: var(--green) !important;
+      color: #fff !important;
+      padding: 0.5rem 1.1rem !important;
+      border-radius: 50px !important;
+      font-weight: 600 !important;
+    }
+    .nav-cta:hover { opacity: 0.88; background: var(--green) !important; }
+
+    .nav-right { display: flex; align-items: center; gap: 1rem; }
+
+    .theme-toggle {
+      background: var(--soft);
+      border: 1.5px solid var(--border);
+      border-radius: 50px;
+      width: 52px; height: 28px;
+      cursor: pointer;
+      position: relative;
+      transition: background 0.3s;
+      flex-shrink: 0;
+    }
+    .theme-toggle::after {
+      content: '';
+      position: absolute;
+      top: 3px; left: 3px;
+      width: 20px; height: 20px;
+      border-radius: 50%;
+      background: var(--green);
+      transition: transform 0.3s, background 0.3s;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+    }
+    [data-theme="dark"] .theme-toggle::after { transform: translateX(24px); background: var(--lime); }
+    .toggle-icon { position: absolute; top: 50%; transform: translateY(-50%); font-size: 0.65rem; pointer-events: none; }
+    .toggle-icon.sun { left: 6px; }
+    .toggle-icon.moon { right: 6px; }
+
+    .hamburger { display: none; flex-direction: column; gap: 5px; cursor: pointer; background: none; border: none; padding: 4px; }
+    .hamburger span { display: block; width: 24px; height: 2.5px; background: var(--text); border-radius: 4px; transition: all 0.3s; }
+    .hamburger.open span:nth-child(1) { transform: translateY(7.5px) rotate(45deg); }
+    .hamburger.open span:nth-child(2) { opacity: 0; }
+    .hamburger.open span:nth-child(3) { transform: translateY(-7.5px) rotate(-45deg); }
+
+    .mobile-menu {
+      display: none; flex-direction: column; gap: 0.3rem;
+      position: absolute; top: calc(100% + 8px); left: 1rem; right: 1rem;
+      background: var(--nav-bg);
+      backdrop-filter: blur(22px) saturate(180%);
+      -webkit-backdrop-filter: blur(22px) saturate(180%);
+      border: 1px solid var(--nav-border);
+      border-radius: 16px; padding: 1rem;
+      box-shadow: 0 8px 32px var(--nav-shadow); z-index: 99;
+    }
+    .mobile-menu.open { display: flex; }
+    .mobile-menu a { text-decoration: none; color: var(--text); font-weight: 500; font-size: 1rem; padding: 0.7rem 1rem; border-radius: 10px; transition: background 0.2s; }
+    .mobile-menu a:hover { background: rgba(82,183,136,0.15); color: var(--green); }
+    .mobile-menu .nav-cta { background: var(--green) !important; color: #fff !important; text-align: center; margin-top: 0.3rem; }
+
+    /* ── AUTH LAYOUT ── */
+    .auth-wrap {
+      flex: 1;
+      display: grid;
+      grid-template-columns: 1.05fr 1fr;
+      max-width: 1180px;
+      width: 100%;
+      margin: 0 auto;
+      padding: 2.5rem 2rem;
+      gap: 2.5rem;
+      align-items: center;
+    }
+
+    /* Left brand panel */
+    .auth-brand {
+      background: var(--hero-grad);
+      border: 1px solid var(--border);
+      border-radius: 28px;
+      padding: 3rem 2.8rem;
+      min-height: 520px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      position: relative;
+      overflow: hidden;
+    }
+    .auth-brand::after {
+      content: '';
+      position: absolute;
+      width: 340px; height: 340px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(82,183,136,0.28), transparent 70%);
+      bottom: -120px; right: -100px;
+      pointer-events: none;
+    }
+    .brand-badge {
+      align-self: flex-start;
+      background: var(--lime);
+      color: var(--bg);
+      font-size: 0.78rem;
+      font-weight: 700;
+      padding: 0.35rem 1.1rem;
+      border-radius: 50px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      margin-bottom: 1.6rem;
+    }
+    .auth-brand h1 {
+      font-family: 'Playfair Display', serif;
+      font-size: clamp(2.2rem, 3.6vw, 3.2rem);
+      font-weight: 700;
+      line-height: 1.12;
+      letter-spacing: -0.02em;
+      margin-bottom: 1rem;
+      max-width: 16ch;
+    }
+    .auth-brand h1 em { font-style: italic; color: var(--green); }
+    .auth-brand > p {
+      color: var(--muted);
+      font-size: 1.05rem;
+      line-height: 1.7;
+      max-width: 42ch;
+      margin-bottom: 2.2rem;
+    }
+    .brand-points { list-style: none; display: flex; flex-direction: column; gap: 1rem; }
+    .brand-points li { display: flex; align-items: center; gap: 0.85rem; font-weight: 500; font-size: 0.98rem; }
+    .brand-points .bp-icon {
+      flex-shrink: 0;
+      width: 42px; height: 42px;
+      display: grid; place-items: center;
+      background: var(--card);
+      border-radius: 12px;
+      font-size: 1.25rem;
+      box-shadow: 0 2px 10px var(--nav-shadow);
+    }
+
+    /* Right form card */
+    .auth-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 24px;
+      padding: 2.6rem 2.4rem;
+      box-shadow: 0 12px 40px var(--nav-shadow);
+      width: 100%;
+      max-width: 440px;
+      justify-self: center;
+    }
+    .auth-card .form-logo {
+      display: none;
+      font-family: 'Playfair Display', serif;
+      font-size: 1.5rem; font-weight: 700; font-style: italic;
+      color: var(--green); text-decoration: none;
+      margin-bottom: 1.5rem;
+    }
+    .auth-card .form-logo span { font-style: normal; color: var(--lime); }
+
+    .auth-card h2 {
+      font-family: 'Playfair Display', serif;
+      font-size: 1.9rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      margin-bottom: 0.4rem;
+    }
+    .auth-card .sub { color: var(--muted); font-size: 0.95rem; margin-bottom: 1.8rem; line-height: 1.6; }
+
+    .field { margin-bottom: 1.15rem; }
+    .field label {
+      display: block;
+      font-size: 0.82rem;
+      font-weight: 600;
+      letter-spacing: 0.02em;
+      margin-bottom: 0.45rem;
+      color: var(--text);
+    }
+    .input-shell { position: relative; }
+    .field input {
+      width: 100%;
+      font-family: inherit;
+      font-size: 0.95rem;
+      color: var(--text);
+      background: var(--field-bg);
+      border: 1.5px solid var(--border);
+      border-radius: 12px;
+      padding: 0.85rem 1rem;
+      min-height: 48px;
+      transition: border-color 0.15s ease-out, box-shadow 0.15s ease-out, transform 0.15s ease-out;
+    }
+    .field input::placeholder { color: var(--muted); opacity: 0.7; }
+    .field input:focus {
+      outline: none;
+      border-color: var(--green);
+      box-shadow: 0 0 0 4px rgba(82,183,136,0.18);
+    }
+    .field input:focus { transform: scale(1.005); }
+    .field input[aria-invalid="true"] { border-color: var(--red); }
+    .field.has-toggle input { padding-right: 3rem; }
+
+    .pw-toggle {
+      position: absolute;
+      top: 50%; right: 0.5rem;
+      transform: translateY(-50%);
+      width: 40px; height: 40px;
+      display: grid; place-items: center;
+      background: none; border: none; cursor: pointer;
+      border-radius: 8px; font-size: 1.05rem; line-height: 1;
+      transition: background 0.15s;
+    }
+    .pw-toggle:hover { background: rgba(82,183,136,0.12); }
+    .pw-toggle:focus-visible { outline: 2px solid var(--green); outline-offset: 2px; }
+
+    .error-msg { display: block; color: var(--red); font-size: 0.78rem; margin-top: 0.4rem; min-height: 1em; }
+
+    .row-between {
+      display: flex; align-items: center; justify-content: space-between;
+      flex-wrap: wrap; gap: 0.5rem;
+      margin: 0.2rem 0 1.6rem;
+    }
+    .remember { display: flex; align-items: center; gap: 0.5rem; cursor: pointer; font-size: 0.88rem; color: var(--muted); }
+    .remember input { width: 17px; height: 17px; accent-color: var(--green); cursor: pointer; }
+    .link-green { color: var(--green); font-weight: 600; font-size: 0.88rem; text-decoration: none; }
+    .link-green:hover { text-decoration: underline; }
+
+    .btn-primary {
+      width: 100%;
+      background: var(--green);
+      color: #fff;
+      border: none;
+      padding: 0.95rem 2rem;
+      border-radius: 50px;
+      font-family: inherit;
+      font-weight: 600;
+      font-size: 1rem;
+      cursor: pointer;
+      box-shadow: 0 4px 18px rgba(45,106,79,0.3);
+      transition: opacity 0.2s, transform 0.08s ease-in;
+      display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem;
+      min-height: 50px;
+    }
+    .btn-primary:hover { opacity: 0.9; }
+    .btn-primary:active { transform: scale(0.97); }
+    .btn-primary:disabled { opacity: 0.7; cursor: default; }
+
+    .spinner {
+      width: 17px; height: 17px;
+      border: 2.5px solid rgba(255,255,255,0.4);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      display: none;
+    }
+    .btn-primary.loading .spinner { display: block; }
+    .btn-primary.loading .btn-label { opacity: 0.85; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .divider {
+      display: flex; align-items: center; gap: 0.9rem;
+      color: var(--muted); font-size: 0.8rem;
+      margin: 1.5rem 0;
+    }
+    .divider::before, .divider::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+
+    .social-row { display: flex; flex-direction: column; gap: 0.7rem; }
+    .btn-social {
+      display: flex; align-items: center; justify-content: center; gap: 0.6rem;
+      width: 100%;
+      background: var(--field-bg);
+      color: var(--text);
+      border: 1.5px solid var(--border);
+      border-radius: 50px;
+      padding: 0.8rem 1rem;
+      min-height: 48px;
+      font-family: inherit; font-weight: 600; font-size: 0.92rem;
+      cursor: pointer;
+      transition: border-color 0.15s, transform 0.15s ease-out, background 0.15s;
+    }
+    .btn-social:hover { border-color: var(--green); transform: translateY(-2px); }
+    .btn-social svg { width: 18px; height: 18px; }
+
+    .signup-line { text-align: center; margin-top: 1.7rem; font-size: 0.9rem; color: var(--muted); }
+
+    /* ── FOOTER (matches homepage) ── */
+    footer { background: var(--feat-bg); color: #556B5A; text-align: center; padding: 1.6rem; font-size: 0.85rem; }
+    footer span { color: var(--lime); }
+
+    /* ── ENTRANCE MOTION ── */
+    .auth-card, .auth-brand { animation: rise 0.45s cubic-bezier(0,0,0.2,1) both; }
+    .auth-brand { animation-delay: 0.05s; }
+    @keyframes rise { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: none; } }
+
+    /* ── RESPONSIVE ── */
+    @media (max-width: 940px) {
+      .auth-wrap { grid-template-columns: 1fr; max-width: 480px; gap: 0; }
+      .auth-brand { display: none; }
+      .auth-card { max-width: 100%; }
+      .auth-card .form-logo { display: inline-block; }
+    }
+    @media (max-width: 640px) {
+      nav { padding: 0.9rem 1.2rem; }
+      nav ul { display: none; }
+      .hamburger { display: flex; }
+      .auth-wrap { padding: 1.5rem 1.1rem; }
+      .auth-card { padding: 2rem 1.4rem; border-radius: 20px; }
+    }
+
+    @media (hover: none) {
+      .btn-social:hover { transform: none; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- AUTH -->
+  <main class="auth-wrap">
+
+    <!-- Left brand panel (desktop) -->
+    <section class="auth-brand" aria-hidden="true">
+      <span class="brand-badge">Welcome back</span>
+      <h1>Your campus, <em>all in one place</em></h1>
+      <p>Log in to order food ahead, find study groups, check what's happening on campus, and look after your wellbeing.</p>
+      <ul class="brand-points">
+        <li><span class="bp-icon">🍽️</span> Skip the cafeteria queue with order-ahead</li>
+        <li><span class="bp-icon">🧠</span> Wellness tools whenever you need them</li>
+        <li><span class="bp-icon">👥</span> Study groups for every course</li>
+      </ul>
+    </section>
+
+    <!-- Right form card -->
+    <section class="auth-card">
+      <a href="gradguide.html" class="form-logo"><em>Grad</em><span>Guide</span></a>
+      <h2>Log in</h2>
+      <p class="sub">Welcome back — sign in to continue to GradGuide.</p>
+
+      <form id="loginForm" novalidate>
+        <div class="field">
+          <label for="email">Email address</label>
+          <div class="input-shell">
+            <input type="email" id="email" name="email" inputmode="email"
+                   autocomplete="email" placeholder="you@university.edu"
+                   aria-describedby="emailError" required />
+          </div>
+          <span class="error-msg" id="emailError" aria-live="polite"></span>
+        </div>
+
+        <div class="field has-toggle">
+          <label for="password">Password</label>
+          <div class="input-shell">
+            <input type="password" id="password" name="password"
+                   autocomplete="current-password" placeholder="Enter your password"
+                   aria-describedby="passwordError" required />
+            <button type="button" class="pw-toggle" id="pwToggle"
+                    aria-label="Show password" aria-pressed="false">👁️</button>
+          </div>
+          <span class="error-msg" id="passwordError" aria-live="polite"></span>
+        </div>
+
+        <div class="row-between">
+          <label class="remember">
+            <input type="checkbox" id="remember" name="remember" />
+            Remember me
+          </label>
+          <a href="#" class="link-green">Forgot password?</a>
+        </div>
+
+        <button type="submit" class="btn-primary" id="submitBtn">
+          <span class="spinner" aria-hidden="true"></span>
+          <span class="btn-label">Log in</span>
+        </button>
+      </form>
+
+      <p class="signup-line">New to GradGuide? <a href="gradguidesignup.html" class="link-green">Create an account</a></p>
+    </section>
+  </main>
+
+  <!-- FOOTER -->
+  <footer>
+    <p>Built By Taiwo Emmanuel for students · <span>GradGuide</span> · Your Campus Companion</p>
+  </footer>
+
+  <script>
+    /* ════════════════════════════════════════════════════════════
+       STEP 1: CONNECT TO YOUR BACKEND
+       Paste your two values from Supabase → Settings below.
+       - API URL  = the address of your backend
+       - KEY      = your publishable (or anon) key — safe to be public
+       `db` is your remote control for the backend from here on.
+       ════════════════════════════════════════════════════════════ */
+    const SUPABASE_URL = 'https://yjazbxhrxxhupoyhwabs.supabase.co';   // your API URL
+    const SUPABASE_KEY = 'sb_publishable_cyhm89oaEmFeztd4RRE1Rg_v7b8pesQ';   // your publishable key
+
+    const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+    /* ── Apply saved theme from the homepage ('gradguide-theme' key) ── */
+    const html = document.documentElement;
+    const saved = localStorage.getItem('gradguide-theme');
+    if (saved) html.setAttribute('data-theme', saved);
+
+    /* ── Show / hide password ── */
+    const pwToggle = document.getElementById('pwToggle');
+    const pwInput = document.getElementById('password');
+    pwToggle.addEventListener('click', () => {
+      const showing = pwInput.type === 'text';
+      pwInput.type = showing ? 'password' : 'text';
+      pwToggle.textContent = showing ? '👁️' : '🙈';
+      pwToggle.setAttribute('aria-pressed', String(!showing));
+      pwToggle.setAttribute('aria-label', showing ? 'Show password' : 'Hide password');
+    });
+
+    /* ── Validation + submit ── */
+    const form = document.getElementById('loginForm');
+    const email = document.getElementById('email');
+    const emailError = document.getElementById('emailError');
+    const passwordError = document.getElementById('passwordError');
+    const submitBtn = document.getElementById('submitBtn');
+
+    function setError(input, el, msg) {
+      el.textContent = msg;
+      input.setAttribute('aria-invalid', msg ? 'true' : 'false');
+      return !msg;
+    }
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const emailOk = setError(email, emailError,
+        !email.value.trim() ? 'Please enter your email.'
+        : !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.value.trim()) ? 'Enter a valid email address.'
+        : '');
+      const pwOk = setError(pwInput, passwordError,
+        !pwInput.value ? 'Please enter your password.'
+        : pwInput.value.length < 6 ? 'Password must be at least 6 characters.'
+        : '');
+
+      if (!emailOk || !pwOk) {
+        (!emailOk ? email : pwInput).focus();
+        return;
+      }
+
+      /* ════════════════════════════════════════════════════════════
+         STEP 2: ASK THE BACKEND TO LOG THE USER IN
+         This one call sends the email + password to Supabase's server.
+         The SERVER checks them (hashes the password, compares, issues a
+         token) and sends back either { data } on success or { error }.
+         We never see or store the real password — the server does it all.
+         ════════════════════════════════════════════════════════════ */
+      submitBtn.classList.add('loading');
+      submitBtn.disabled = true;
+      submitBtn.querySelector('.btn-label').textContent = 'Logging in…';
+
+      const { data, error } = await db.auth.signInWithPassword({
+        email: email.value.trim(),
+        password: pwInput.value
+      });
+
+      if (error) {
+        // Log the real reason for the developer (visible only in the
+        // console, never to the user).
+        console.error('Login error:', error.message);
+
+        // Show the user ONE vague message on purpose — so an attacker
+        // can't tell whether the email exists or the password was wrong.
+        submitBtn.classList.remove('loading');
+        submitBtn.disabled = false;
+        submitBtn.querySelector('.btn-label').textContent = 'Log in';
+        setError(pwInput, passwordError, 'Incorrect email or password. New here? Create an account below.');
+        return; 
+      }
+
+      // Success! Supabase has already saved the session token in the browser
+      // for us. Future pages can ask `db.auth.getSession()` to see it.
+      window.location.href = 'gradguide.html';
+    });
+
+    // Clear an error as soon as the user starts fixing it
+    [email, pwInput].forEach(inp =>
+      inp.addEventListener('input', () => {
+        const el = inp === email ? emailError : passwordError;
+        if (el.textContent) setError(inp, el, '');
+      })
+    );
+  </script>
+
+</body>
+</html>
